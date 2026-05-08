@@ -25,6 +25,11 @@ Através do arquivo `manifest.json`, o Next.js se comporta como um aplicativo na
 
 ## 4. O Sistema de Cálculo Top-Down / Bottom-Up
 
-O backend atuará não apenas como um CRUD, mas como um **Motor Lógico**.
+O backend atua não apenas como um CRUD, mas como um **Motor Lógico**.
 - **Bottom-Up**: Saber a rota que o sinal faz desde a casa do cliente até a Central.
-- **Top-Down**: Atualizar os cálculos de dBm (potência do sinal) de todos os clientes se ocorrer um rompimento ou atenuação em uma fusão lá em cima da árvore PON. Isso é feito de forma assíncrona utilizando o Redis.
+- **Top-Down (Assíncrono e Otimizado)**: Atualizar os cálculos de dBm (potência do sinal) de todos os clientes se ocorrer um rompimento ou atenuação em uma fusão alta da árvore PON. O projeto implementou o `bullmq` integrado ao Redis. O usuário requisita o recálculo via `POST /api/network/calculate` e monitora com WebSockets ou Polling em `/api/jobs/:id`.
+
+## 5. Garantia de Segurança: RLS + JWT (Multi-Tenant)
+
+Garantir que um provedor de internet só veja os seus dados é a chave do projeto.
+Resolvemos a questão criando políticas robustas (RLS - *Row Level Security*) dentro do próprio PostGIS. O Node.js não envia a verificação do `tenant_id` no WHERE da SQL. Ele simplesmente decodifica o `tenant_id` do **JWT** com o middleware, passa o ID via transação (`SET LOCAL app.current_tenant_id = '...'`) e faz as consultas limpas. Assim, vazamentos de SQL Injection se tornam inviáveis contra o particionamento lógico do sistema.
