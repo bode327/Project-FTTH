@@ -1,11 +1,15 @@
 import { Pool } from 'pg';
 import { AuthenticatedRequest } from './middleware/auth';
 
+if (!process.env.DB_PASSWORD) {
+  throw new Error('DB_PASSWORD is not configured.');
+}
+
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
   user: process.env.DB_USER || 'ftth_admin',
-  password: process.env.DB_PASSWORD || 'secretpassword',
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'ftth_saas',
 });
 

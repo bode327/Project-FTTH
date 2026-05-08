@@ -1,24 +1,30 @@
-import HelpIcon from '@/components/HelpIcon';
+"use client";
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8">
-      <main className="max-w-2xl w-full bg-white rounded-xl shadow-sm p-8 border border-gray-100">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Sistema de Documentação FTTH</h1>
+  const router = useRouter();
 
-        <div className="space-y-6">
-          <section className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <h2 className="text-xl font-semibold text-blue-900 mb-2 flex items-center">
-              Acesso Técnico de Rua
-              <HelpIcon
-                title="Acesso Mobile PWA"
-                description="Técnicos podem acessar o sistema diretamente pelo celular. Ative o GPS para encontrar caixas e rotas próximas automaticamente."
-              />
-            </h2>
-            <p className="text-gray-700">Acesse facilmente os dados da localização atual e caixas próximas.</p>
-          </section>
-        </div>
-      </main>
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333/api';
+    fetch(`${apiUrl}/auth/status`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.isSetup) {
+          router.push('/login');
+        } else {
+          router.push('/setup');
+        }
+      })
+      .catch(() => {
+        router.push('/login'); // Fallback in case of server offline error handling
+      });
+  }, [router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500">
+      Redirecionando...
     </div>
   );
 }

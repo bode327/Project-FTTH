@@ -5,12 +5,15 @@ import jwt from 'jsonwebtoken';
 import { authenticateToken, AuthenticatedRequest } from './middleware/auth';
 import { queryWithRLS } from './db';
 import { networkCalcQueue } from './jobs/networkWorker';
+import authRoutes from './routes/auth';
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.use('/api/auth', authRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running' });

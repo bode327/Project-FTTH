@@ -18,7 +18,10 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey12345') as { tenant_id: string, user_id: string };
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not configured.');
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { tenant_id: string, user_id: string };
 
     // Anexa o tenant_id extraído do JWT à requisição,
     // não permitindo que o frontend forje o tenant_id no body ou params.

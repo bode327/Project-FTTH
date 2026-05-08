@@ -8,6 +8,17 @@ CREATE TABLE IF NOT EXISTS tenants (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabela de Usuários
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'technician', -- 'admin', 'technician'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Tabela de Nós da Rede (CTO, CE, POP)
 CREATE TABLE IF NOT EXISTS network_nodes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
