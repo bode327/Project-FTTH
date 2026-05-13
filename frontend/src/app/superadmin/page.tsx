@@ -411,7 +411,7 @@ export default function SuperadminPage() {
                     <td className="px-4 py-3 text-center text-slate-300">{tenant.ces_count}</td>
                     <td className="px-4 py-3 text-center text-slate-300">{tenant.clientes_count}</td>
                     <td className="px-4 py-3 text-center text-slate-300">{tenant.cabos_count}</td>
-                    <td className="px-4 py-3 text-center text-slate-300">{tenant.cabo_km?.toFixed(2) || '0.00'}</td>
+                    <td className="px-4 py-3 text-center text-slate-300">{typeof tenant.cabo_km === 'number' ? tenant.cabo_km.toFixed(2) : parseFloat(tenant.cabo_km || '0').toFixed(2)}</td>
                     <td className="px-4 py-3 text-center text-slate-300">{tenant.fibers_count}</td>
                     <td className="px-4 py-3 text-center text-slate-300">{tenant.switches_count}</td>
                     <td className="px-4 py-3 text-center text-slate-300">{tenant.routers_count}</td>

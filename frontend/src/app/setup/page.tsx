@@ -44,6 +44,7 @@ export default function SetupPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao realizar setup');
       localStorage.setItem('token', data.token);
+      if (data.user_id) localStorage.setItem('userId', data.user_id);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);

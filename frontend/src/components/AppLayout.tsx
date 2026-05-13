@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -39,8 +39,13 @@ const navItems: NavItem[] = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+  const [token, setToken] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setToken(localStorage.getItem('token'));
+    setUserRole(localStorage.getItem('userRole'));
+  }, []);
 
   useEffect(() => {
     if (!token) router.push('/login');

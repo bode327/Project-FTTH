@@ -118,7 +118,7 @@ router.post(
         { expiresIn: '8h' }
       );
 
-      res.json({ token, role: user.role });
+      res.json({ token, role: user.role, user_id: user.id });
     } catch (error: any) {
       res.status(500).json({ error: 'Internal server error' });
     }
