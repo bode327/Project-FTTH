@@ -41,7 +41,10 @@ router.get('/:type', async (req: AuthenticatedRequest, res) => {
     };
     const result = await queryWithRLS(req, queries[type as keyof typeof queries], []);
     res.json({ data: result.rows });
-  } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
+  } catch (error: any) { 
+    console.error('Catalog GET error:', error.message, error.code, error.detail);
+    res.status(500).json({ error: 'Internal server error: ' + error.message }); 
+  }
 });
 
 router.post('/:type', async (req: AuthenticatedRequest, res) => {

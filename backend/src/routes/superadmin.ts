@@ -10,29 +10,52 @@ router.use(requireSuperAdmin);
 router.get('/tenants', async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
-      SELECT t.*,
+      SELECT 
+        t.id, t.name as empresa, t.domain as dominio, t.plan as plano, t.status,
+        t.domain, t.plan, t.status, t.blocked_reason, t.blocked_at,
+        t.billing_cycle, t.next_billing_date,
+        t.max_pops, t.max_olts, t.max_ctos, t.max_ces, t.max_clients, t.max_cables, t.max_fibers,
+        t.features, t.created_at, t.updated_at,
         (SELECT COUNT(*) FROM pops WHERE tenant_id = t.id) as pops_count,
         (SELECT COUNT(*) FROM olt_chassis WHERE tenant_id = t.id) as olts_count,
         (SELECT COUNT(*) FROM ctos WHERE tenant_id = t.id) as ctos_count,
         (SELECT COUNT(*) FROM ces WHERE tenant_id = t.id) as ces_count,
-        (SELECT COUNT(*) FROM clients WHERE tenant_id = t.id) as clients_count,
-        (SELECT COUNT(*) FROM cables WHERE tenant_id = t.id) as cables_count,
-        (SELECT COALESCE(SUM(calculated_distance_km),0) FROM cables WHERE tenant_id = t.id) as total_cable_km,
+        (SELECT COUNT(*) FROM clients WHERE tenant_id = t.id) as clientes_count,
+        (SELECT COUNT(*) FROM cables WHERE tenant_id = t.id) as cabos_count,
+        (SELECT COALESCE(SUM(calculated_distance_km),0) FROM cables WHERE tenant_id = t.id) as cabo_km,
         (SELECT COUNT(*) FROM fibers WHERE tenant_id = t.id) as fibers_count,
-        (SELECT COUNT(*) FROM users WHERE tenant_id = t.id) as users_count,
-        (SELECT MAX(created_at) FROM clients WHERE tenant_id = t.id) as last_client_added
+        (SELECT COUNT(*) FROM users WHERE tenant_id = t.id) as usuarios_count,
+        (SELECT MAX(created_at) FROM clients WHERE tenant_id = t.id) as last_activity,
+        (SELECT u.email FROM users u WHERE u.tenant_id = t.id AND u.role = 'admin' ORDER BY u.created_at LIMIT 1) as admin_email,
+        (SELECT u.name FROM users u WHERE u.tenant_id = t.id AND u.role = 'admin' ORDER BY u.created_at LIMIT 1) as admin_name
       FROM tenants t
       ORDER BY t.created_at DESC
     `);
     res.json({ data: result.rows });
-  } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
+  } catch (error: any) { 
+    console.error('Superadmin tenants error:', error);
+    res.status(500).json({ error: 'Internal server error' }); 
+  }
 });
 
 router.post('/tenants', async (req: AuthenticatedRequest, res) => {
   try {
-    const { name, domain, email, password, adminName, plan, maxPops, maxOlts, maxCtos, maxCes, maxClients, maxCables, maxFibers, features } = req.body;
+    const { nome_empresa, dominio, admin_email, admin_name, password, plano, max_pops, max_olts, max_ctos, max_ces, max_clients, max_cables, max_fibers, features } = req.body;
+    const name = nome_empresa;
+    const domain = dominio;
+    const email = admin_email;
+    const adminName = admin_name;
+    const plan = plano;
+    const maxPops = max_pops;
+    const maxOlts = max_olts;
+    const maxCtos = max_ctos;
+    const maxCes = max_ces;
+    const maxClients = max_clients;
+    const maxCables = max_cables;
+    const maxFibers = max_fibers;
+
     if (!name || !email || !password || !adminName) {
-      res.status(400).json({ error: 'name, email, password, adminName são obrigatórios' }); return;
+      res.status(400).json({ error: 'nome_empresa, admin_email, password, admin_name são obrigatórios' }); return;
     }
     const client = await pool.connect();
     try {
@@ -52,33 +75,36 @@ router.post('/tenants', async (req: AuthenticatedRequest, res) => {
       res.status(201).json({ data: tenantResult.rows[0], message: 'Empresa criada com sucesso' });
     } catch (e) { await client.query('ROLLBACK'); throw e; }
     finally { client.release(); }
-  } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
+  } catch (error: any) { 
+    console.error('Create tenant error:', error);
+    res.status(500).json({ error: 'Internal server error' }); 
+  }
 });
 
 router.put('/tenants/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
-    const { name, domain, plan, status, blocked_reason, maxPops, maxOlts, maxCtos, maxCes, maxClients, maxCables, maxFibers, features, billing_cycle, next_billing_date } = req.body;
+    const { empresa, dominio, plano, status, blocked_reason, max_pops, max_olts, max_ctos, max_ces, max_clients, max_cables, max_fibers, features, billing_cycle, next_billing_date } = req.body;
     const updates: string[] = [];
     const values: any[] = [];
     let idx = 1;
     const add = (k: string, v: any) => { updates.push(`${k} = $${idx}`); values.push(v); idx++; };
 
-    if (name !== undefined) add('name', name);
-    if (domain !== undefined) add('domain', domain);
-    if (plan !== undefined) add('plan', plan);
+    if (empresa !== undefined) add('name', empresa);
+    if (dominio !== undefined) add('domain', dominio);
+    if (plano !== undefined) add('plan', plano);
     if (status !== undefined) {
       add('status', status);
       if (status === 'blocked' || status === 'suspended') add('blocked_at', new Date());
     }
     if (blocked_reason !== undefined) add('blocked_reason', blocked_reason);
-    if (maxPops !== undefined) add('max_pops', maxPops);
-    if (maxOlts !== undefined) add('max_olts', maxOlts);
-    if (maxCtos !== undefined) add('max_ctos', maxCtos);
-    if (maxCes !== undefined) add('max_ces', maxCes);
-    if (maxClients !== undefined) add('max_clients', maxClients);
-    if (maxCables !== undefined) add('max_cables', maxCables);
-    if (maxFibers !== undefined) add('max_fibers', maxFibers);
+    if (max_pops !== undefined) add('max_pops', max_pops);
+    if (max_olts !== undefined) add('max_olts', max_olts);
+    if (max_ctos !== undefined) add('max_ctos', max_ctos);
+    if (max_ces !== undefined) add('max_ces', max_ces);
+    if (max_clients !== undefined) add('max_clients', max_clients);
+    if (max_cables !== undefined) add('max_cables', max_cables);
+    if (max_fibers !== undefined) add('max_fibers', max_fibers);
     if (features !== undefined) add('features', JSON.stringify(features));
     if (billing_cycle !== undefined) add('billing_cycle', billing_cycle);
     if (next_billing_date !== undefined) add('next_billing_date', next_billing_date);
@@ -91,7 +117,10 @@ router.put('/tenants/:id', async (req: AuthenticatedRequest, res) => {
     );
     if (result.rows.length === 0) { res.status(404).json({ error: 'Empresa não encontrada' }); return; }
     res.json({ data: result.rows[0] });
-  } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
+  } catch (error: any) { 
+    console.error('Update tenant error:', error);
+    res.status(500).json({ error: 'Internal server error' }); 
+  }
 });
 
 router.delete('/tenants/:id', async (req: AuthenticatedRequest, res) => {
@@ -146,24 +175,35 @@ router.get('/stats', async (req: AuthenticatedRequest, res) => {
 router.get('/tenants/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const result = await pool.query(`
-      SELECT t.*,
+      SELECT 
+        t.id, t.name as empresa, t.domain as dominio, t.plan as plano, t.status,
+        t.domain, t.plan, t.status, t.blocked_reason, t.blocked_at,
+        t.billing_cycle, t.next_billing_date,
+        t.max_pops, t.max_olts, t.max_ctos, t.max_ces, t.max_clients, t.max_cables, t.max_fibers,
+        t.features, t.created_at, t.updated_at,
         (SELECT COUNT(*) FROM pops WHERE tenant_id = t.id) as pops_count,
         (SELECT COUNT(*) FROM olt_chassis WHERE tenant_id = t.id) as olts_count,
         (SELECT COUNT(*) FROM ctos WHERE tenant_id = t.id) as ctos_count,
         (SELECT COUNT(*) FROM ces WHERE tenant_id = t.id) as ces_count,
-        (SELECT COUNT(*) FROM clients WHERE tenant_id = t.id) as clients_count,
-        (SELECT COUNT(*) FROM cables WHERE tenant_id = t.id) as cables_count,
-        (SELECT COALESCE(SUM(calculated_distance_km),0) FROM cables WHERE tenant_id = t.id) as total_cable_km,
+        (SELECT COUNT(*) FROM clients WHERE tenant_id = t.id) as clientes_count,
+        (SELECT COUNT(*) FROM cables WHERE tenant_id = t.id) as cabos_count,
+        (SELECT COALESCE(SUM(calculated_distance_km),0) FROM cables WHERE tenant_id = t.id) as cabo_km,
         (SELECT COUNT(*) FROM fibers WHERE tenant_id = t.id) as fibers_count,
         (SELECT COUNT(*) FROM switches WHERE tenant_id = t.id) as switches_count,
         (SELECT COUNT(*) FROM routers WHERE tenant_id = t.id) as routers_count,
         (SELECT COUNT(*) FROM dios WHERE tenant_id = t.id) as dios_count,
-        (SELECT COUNT(*) FROM users WHERE tenant_id = t.id) as users_count
+        (SELECT COUNT(*) FROM users WHERE tenant_id = t.id) as usuarios_count,
+        (SELECT MAX(created_at) FROM clients WHERE tenant_id = t.id) as last_activity,
+        (SELECT u.email FROM users u WHERE u.tenant_id = t.id AND u.role = 'admin' ORDER BY u.created_at LIMIT 1) as admin_email,
+        (SELECT u.name FROM users u WHERE u.tenant_id = t.id AND u.role = 'admin' ORDER BY u.created_at LIMIT 1) as admin_name
       FROM tenants t WHERE t.id = $1
     `, [req.params.id]);
     if (result.rows.length === 0) { res.status(404).json({ error: 'Empresa não encontrada' }); return; }
     res.json({ data: result.rows[0] });
-  } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
+  } catch (error: any) { 
+    console.error('Get tenant error:', error);
+    res.status(500).json({ error: 'Internal server error' }); 
+  }
 });
 
 export default router;

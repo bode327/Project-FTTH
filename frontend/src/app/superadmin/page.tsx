@@ -37,7 +37,13 @@ interface Tenant {
   billing_cycle?: string;
   next_billing_date?: string;
   features?: Record<string, boolean>;
-  quotas?: Record<string, number>;
+  max_pops?: number;
+  max_olts?: number;
+  max_ctos?: number;
+  max_ces?: number;
+  max_clients?: number;
+  max_cables?: number;
+  max_fibers?: number;
 }
 
 interface EditFormData {
@@ -144,8 +150,9 @@ export default function SuperadminPage() {
         api.get('/superadmin/stats'),
         api.get('/superadmin/tenants'),
       ]);
-      if (statsData) setStats(statsData);
-      if (tenantsData) setTenants(tenantsData.data || tenantsData || []);
+      if (statsData?.data) setStats(statsData.data);
+      if (tenantsData?.data) setTenants(tenantsData.data || []);
+      else if (tenantsData) setTenants(tenantsData || []);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
     } finally {
@@ -223,7 +230,7 @@ export default function SuperadminPage() {
     }
   };
 
-  const openEdit = (tenant: Tenant) => {
+  const openEdit = (tenant: any) => {
     setSelectedTenant(tenant);
     setEditForm({
       empresa: tenant.empresa,
@@ -233,19 +240,19 @@ export default function SuperadminPage() {
       blocked_reason: tenant.blocked_reason || '',
       billing_cycle: tenant.billing_cycle || 'monthly',
       next_billing_date: tenant.next_billing_date || '',
-      max_pops: tenant.quotas?.max_pops || 5,
-      max_olts: tenant.quotas?.max_olts || 2,
-      max_ctos: tenant.quotas?.max_ctos || 10,
-      max_ces: tenant.quotas?.max_ces || 50,
-      max_clients: tenant.quotas?.max_clients || 100,
-      max_cables: tenant.quotas?.max_cables || 20,
-      max_fibers: tenant.quotas?.max_fibers || 1000,
+      max_pops: tenant.max_pops || 5,
+      max_olts: tenant.max_olts || 2,
+      max_ctos: tenant.max_ctos || 10,
+      max_ces: tenant.max_ces || 50,
+      max_clients: tenant.max_clients || 100,
+      max_cables: tenant.max_cables || 20,
+      max_fibers: tenant.max_fibers || 1000,
       features: tenant.features || {},
     });
     setShowEdit(true);
   };
 
-  const openAnalytics = (tenant: Tenant) => {
+  const openAnalytics = (tenant: any) => {
     setSelectedTenant(tenant);
     setShowAnalytics(true);
   };
@@ -725,10 +732,18 @@ export default function SuperadminPage() {
               <div className="bg-slate-900 rounded-lg p-4">
                 <h4 className="text-sm font-semibold text-slate-400 mb-3">Cotas</h4>
                 <div className="space-y-2">
-                  {selectedTenant.quotas && Object.entries(selectedTenant.quotas).map(([key, value]) => (
-                    <div key={key} className="flex justify-between text-sm">
-                      <span className="text-slate-400">{key.replace('max_', '').replace('_', ' ')}</span>
-                      <span className="text-white">{value}</span>
+                  {[
+                    { key: 'max_pops', value: selectedTenant.max_pops, label: 'POPs' },
+                    { key: 'max_olts', value: selectedTenant.max_olts, label: 'OLTs' },
+                    { key: 'max_ctos', value: selectedTenant.max_ctos, label: 'CTOs' },
+                    { key: 'max_ces', value: selectedTenant.max_ces, label: 'CTEs' },
+                    { key: 'max_clients', value: selectedTenant.max_clients, label: 'Clientes' },
+                    { key: 'max_cables', value: selectedTenant.max_cables, label: 'Cabos' },
+                    { key: 'max_fibers', value: selectedTenant.max_fibers, label: 'Fibras' },
+                  ].map(item => (
+                    <div key={item.key} className="flex justify-between text-sm">
+                      <span className="text-slate-400">{item.label}</span>
+                      <span className="text-white">{item.value || 0}</span>
                     </div>
                   ))}
                 </div>

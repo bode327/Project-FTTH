@@ -66,6 +66,7 @@ router.post(
     body('model').optional().trim().escape(),
     body('brand').optional().trim().escape(),
     body('slots_total').optional().isInt({ min: 1, max: 64 }),
+    body('catalog_olt_model_id').optional().isUUID(),
   ],
   async (req: AuthenticatedRequest, res: any) => {
     const errors = validationResult(req);
@@ -74,10 +75,10 @@ router.post(
       return;
     }
     try {
-      const { name, pop_id, model, brand, slots_total } = req.body;
+      const { name, pop_id, model, brand, slots_total, catalog_olt_model_id } = req.body;
       const result = await queryWithRLS(req,
-        'INSERT INTO olt_chassis (tenant_id, pop_id, name, model, brand, slots_total) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [req.user?.tenant_id, pop_id, name, model || null, brand || null, slots_total || 16]
+        'INSERT INTO olt_chassis (tenant_id, pop_id, name, model, brand, slots_total, catalog_olt_model_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [req.user?.tenant_id, pop_id, name, model || null, brand || null, slots_total || 16, catalog_olt_model_id || null]
       );
       res.status(201).json({ data: result.rows[0] });
     } catch (error: any) {

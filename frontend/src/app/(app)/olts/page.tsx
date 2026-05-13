@@ -7,24 +7,37 @@ import HelpIcon from '@/components/HelpIcon';
 export default function OltPage() {
   const [olts, setOlts] = useState<any[]>([]);
   const [pops, setPops] = useState<any[]>([]);
+  const [oltModels, setOltModels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', pop_id: '', model: '', brand: '', slots_total: 16 });
+  const [form, setForm] = useState({ name: '', pop_id: '', catalog_olt_model_id: '', model: '', brand: '', slots_total: 16 });
   const [selectedOlt, setSelectedOlt] = useState<any>(null);
   const [slots, setSlots] = useState<any[]>([]);
 
   const load = () => {
     api.get(apiRoutes.olts).then(data => { if (data) setOlts(data.data || []); });
     api.get(apiRoutes.pops).then(data => { if (data) setPops(data.data || []); setLoading(false); });
+    api.get('/catalogs/olt-model').then(data => { if (data) setOltModels(data.data || []); });
   };
   useEffect(() => { load(); }, []);
+
+  const handleCatalogChange = (catalogId: string) => {
+    const selectedModel = oltModels.find(m => m.id === catalogId);
+    setForm(prev => ({
+      ...prev,
+      catalog_olt_model_id: catalogId,
+      model: selectedModel?.model || '',
+      brand: selectedModel?.brand || '',
+      slots_total: selectedModel?.total_slots || 16
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await api.post(apiRoutes.olts, form);
       setShowForm(false);
-      setForm({ name: '', pop_id: '', model: '', brand: '', slots_total: 16 });
+      setForm({ name: '', pop_id: '', catalog_olt_model_id: '', model: '', brand: '', slots_total: 16 });
       load();
     } catch (err: any) { alert(err.message); }
   };
@@ -69,6 +82,13 @@ export default function OltPage() {
               <select value={form.pop_id} onChange={e => setForm({...form, pop_id: e.target.value})} required className="w-full px-3 py-2 border rounded-lg">
                 <option value="">Selecione o POP</option>
                 {pops.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Modelo do Catálogo</label>
+              <select value={form.catalog_olt_model_id} onChange={e => handleCatalogChange(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                <option value="">Selecione (opcional)</option>
+                {oltModels.map(m => <option key={m.id} value={m.id}>{m.brand} - {m.model}</option>)}
               </select>
             </div>
             <div>
