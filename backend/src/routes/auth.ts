@@ -62,7 +62,7 @@ router.post(
       }
 
       const token = jwt.sign(
-        { tenant_id: tenantId, user_id: userResult.rows[0].id },
+        { tenant_id: tenantId, user_id: userResult.rows[0].id, role: 'admin' },
         process.env.JWT_SECRET,
         { expiresIn: '8h' }
       );
@@ -113,7 +113,7 @@ router.post(
       }
 
       const token = jwt.sign(
-        { tenant_id: user.tenant_id, user_id: user.id },
+        { tenant_id: user.tenant_id, user_id: user.id, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: '8h' }
       );
