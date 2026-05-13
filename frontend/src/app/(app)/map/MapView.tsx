@@ -2,12 +2,44 @@
 
 import { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, ZoomControl } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 
 interface NodeData { id: string; name: string; address?: string; geom?: any; status?: string; capacity?: number; installed_splitters?: number; plan_mbps?: number; ont_serial?: string; vlan?: number; splitter_ratio?: string; type?: string; }
 interface CableData { id: string; name?: string; geom?: any; status: string; cable_type?: string; fiber_count?: number; used_fibers?: number; calculated_distance_km?: number; total_fibers?: number; node_a_name?: string; node_b_name?: string; node_a_id?: string; node_b_id?: string; cable_type_id?: string; cable_type_name?: string; cable_color?: string; cable_width?: number; cable_dashed?: boolean; }
 interface LayerVisibility { pops: boolean; ctos: boolean; ces: boolean; clients: boolean; cables: boolean; dgos: boolean; }
 type DrawMode = 'idle' | 'node' | 'cable' | 'chain' | 'path';
+
+function NodePopup({ node, type }: { node: NodeData; type: string }) {
+  const colors: Record<string, string> = { pop: 'text-red-600', cto: 'text-green-600', ce: 'text-blue-600', client: 'text-orange-600', dgo: 'text-purple-600' };
+  return (
+    <div className="min-w-64">
+      <h3 className={`font-bold text-base mb-2 ${colors[type] || 'text-gray-700'}`}>{node.name}</h3>
+      <div className="space-y-0.5 text-sm text-gray-600">
+        {node.address && <p><span className="font-medium text-gray-700">Endereço:</span> {node.address}</p>}
+        {node.capacity && <p><span className="font-medium text-gray-700">Capacidade:</span> {node.capacity}</p>}
+        {node.installed_splitters !== undefined && <p><span className="font-medium text-gray-700">Splitters:</span> {node.installed_splitters}</p>}
+        {node.plan_mbps && <p><span className="font-medium text-gray-700">Plano:</span> {node.plan_mbps} Mbps</p>}
+        {node.ont_serial && <p><span className="font-medium text-gray-700">ONT:</span> {node.ont_serial}</p>}
+        {node.vlan && <p><span className="font-medium text-gray-700">VLAN:</span> {node.vlan}</p>}
+        {node.splitter_ratio && <p><span className="font-medium text-gray-700">Ratio:</span> {node.splitter_ratio}</p>}
+        {node.status && <p><span className="font-medium text-gray-700">Status:</span> <span className={`px-2 py-0.5 rounded text-xs ${node.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{node.status}</span></p>}
+      </div>
+    </div>
+  );
+}
+
+function CablePopup({ cable }: { cable: CableData }) {
+  return (
+    <div className="min-w-64">
+      <h3 className="font-bold text-base mb-2 text-gray-800">{cable.name || `Cabo ${cable.node_a_name || '?'} → ${cable.node_b_name || '?'}`}</h3>
+      <div className="space-y-0.5 text-sm text-gray-600">
+        {cable.cable_type_name && <p><span className="font-medium text-gray-700">Tipo:</span> {cable.cable_type_name}</p>}
+        {cable.fiber_count && <p><span className="font-medium text-gray-700">Fibras:</span> {cable.fiber_count}</p>}
+        {cable.calculated_distance_km && <p><span className="font-medium text-gray-700">Distância:</span> {Number(cable.calculated_distance_km).toFixed(2)} km</p>}
+        <p><span className="font-medium text-gray-700">Status:</span> <span className={`px-2 py-0.5 rounded text-xs ${cable.status === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{cable.status || 'N/A'}</span></p>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   pops: NodeData[]; ctos: NodeData[]; ces: NodeData[]; clients: NodeData[]; cables: CableData[]; dgos: NodeData[];
@@ -88,39 +120,6 @@ export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers
   const clientIcon = leaflet ? createIcon('#f97316', '', 6) : undefined;
   const dgoIcon = leaflet ? createIcon('#a855f7', '', 10) : undefined;
   const searchIcon = leaflet ? leaflet.divIcon({ className: '', html: '<div style="font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));text-align:center;line-height:1;">📍</div>', iconSize: [28, 28], iconAnchor: [14, 28] }) : undefined;
-
-  const NodePopup = ({ node, type }: { node: NodeData; type: string }) => {
-    const colors: Record<string, string> = { pop: 'text-red-600', cto: 'text-green-600', ce: 'text-blue-600', client: 'text-orange-600', dgo: 'text-purple-600' };
-    return (
-      <div className="min-w-64">
-        <h3 className={`font-bold text-base mb-2 ${colors[type] || 'text-gray-700'}`}>{node.name}</h3>
-        <div className="space-y-0.5 text-sm text-gray-600">
-          {node.address && <p><span className="font-medium text-gray-700">Endereço:</span> {node.address}</p>}
-          {node.capacity && <p><span className="font-medium text-gray-700">Capacidade:</span> {node.capacity}</p>}
-          {node.installed_splitters !== undefined && <p><span className="font-medium text-gray-700">Splitters:</span> {node.installed_splitters}</p>}
-          {node.plan_mbps && <p><span className="font-medium text-gray-700">Plano:</span> {node.plan_mbps} Mbps</p>}
-          {node.ont_serial && <p><span className="font-medium text-gray-700">ONT:</span> {node.ont_serial}</p>}
-          {node.vlan && <p><span className="font-medium text-gray-700">VLAN:</span> {node.vlan}</p>}
-          {node.splitter_ratio && <p><span className="font-medium text-gray-700">Ratio:</span> {node.splitter_ratio}</p>}
-          {node.status && <p><span className="font-medium text-gray-700">Status:</span> <span className={`px-2 py-0.5 rounded text-xs ${node.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{node.status}</span></p>}
-        </div>
-      </div>
-    );
-  };
-
-  const CablePopup = ({ cable }: { cable: CableData }) => (
-    <div className="min-w-64">
-      <h3 className="font-bold text-base mb-2 text-gray-800">{cable.name || `Cabo ${cable.node_a_name || '?'} → ${cable.node_b_name || '?'}`}</h3>
-      <div className="space-y-0.5 text-sm text-gray-600">
-        {cable.cable_type_name && <p><span className="font-medium text-gray-700">Tipo:</span> {cable.cable_type_name}</p>}
-        {cable.fiber_count && <p><span className="font-medium text-gray-700">Fibras:</span> {cable.fiber_count}</p>}
-        {cable.fiber_count && <p><span className="font-medium text-gray-700">Fibras:</span> {cable.used_fibers || 0}/{cable.fiber_count}</p>}
-        {cable.calculated_distance_km && <p><span className="font-medium text-gray-700">Distância:</span> {Number(cable.calculated_distance_km).toFixed(2)} km</p>}
-        <p><span className="font-medium text-gray-700">Status:</span> <span className={`px-2 py-0.5 rounded text-xs ${cable.status === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{cable.status || 'N/A'}</span></p>
-        {cable.cable_color && <p><span className="font-medium text-gray-700">Cor:</span> <span className="inline-block w-4 h-4 rounded align-middle" style={{ backgroundColor: cable.cable_color }}></span> <span className="text-gray-500">{cable.cable_color}</span></p>}
-      </div>
-    </div>
-  );
 
   const getNodeType = (node: NodeData): string => {
     if (pops.some(p => p.id === node.id)) return 'pop';
