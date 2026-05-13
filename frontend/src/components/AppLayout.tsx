@@ -34,11 +34,13 @@ const navItems: NavItem[] = [
   { label: 'Projetos', href: '/projects', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
   { label: 'Áreas', href: '/areas', icon: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7' },
   { label: 'Usuários', href: '/users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+  { label: '🔐 Painel SaaS', href: '/superadmin', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
 
   useEffect(() => {
     if (!token) router.push('/login');
@@ -58,13 +60,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex-1 overflow-y-auto p-2 space-y-1">
           {navItems.map(item => (
+            (item.href !== '/superadmin' || userRole === 'superadmin') && (
             <Link key={item.href} href={item.href}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${item.href === '/superadmin' ? 'text-yellow-300 hover:bg-yellow-800/30' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}>
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
               </svg>
               {item.label}
             </Link>
+            )
           ))}
         </nav>
         <div className="p-3 border-t border-slate-700">

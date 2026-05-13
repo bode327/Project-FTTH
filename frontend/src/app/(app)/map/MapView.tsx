@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, ZoomControl, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-const { BaseLayer } = LayersControl;
 
 interface NodeData { id: string; name: string; address?: string; geom?: any; status?: string; capacity?: number; installed_splitters?: number; plan_mbps?: number; ont_serial?: string; vlan?: number; splitter_ratio?: string; type?: string; }
 interface CableData { id: string; name?: string; geom?: any; status: string; cable_type?: string; fiber_count?: number; used_fibers?: number; calculated_distance_km?: number; total_fibers?: number; node_a_name?: string; node_b_name?: string; node_a_id?: string; node_b_id?: string; cable_type_id?: string; cable_type_name?: string; cable_color?: string; cable_width?: number; cable_dashed?: boolean; }
@@ -20,6 +19,7 @@ interface Props {
   onDblClick?: () => void;
   onRightClick?: () => void;
   searchedLocation?: { lat: number; lng: number } | null;
+  satelliteView?: boolean;
 }
 
 const DEFAULT_CENTER: [number, number] = [-19.9, -43.9];
@@ -47,7 +47,7 @@ function ClickHandler({ onMapClick, onDblClick, onRightClick }: { onMapClick: (l
   return null;
 }
 
-export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers, leaflet, getCableColor, onMapClick, setMapRef, cableStartNode, tempLineEnd, chainStartNode, drawMode, cableColor = '#6b7280', cableWidth = 3, pathPoints = [], onDblClick, onRightClick, searchedLocation }: Props) {
+export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers, leaflet, getCableColor, onMapClick, setMapRef, cableStartNode, tempLineEnd, chainStartNode, drawMode, cableColor = '#6b7280', cableWidth = 3, pathPoints = [], onDblClick, onRightClick, searchedLocation, satelliteView }: Props) {
   const hasData = [...pops, ...ctos, ...ces, ...clients, ...dgos].filter(n => n.geom?.coordinates).length > 0;
 
   const allNodes = useMemo(() => [...pops, ...ctos, ...ces, ...clients, ...dgos], [pops, ctos, ces, clients, dgos]);
@@ -87,7 +87,7 @@ export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers
   const ceIcon = leaflet ? createIcon('#3b82f6', 'E', 10) : undefined;
   const clientIcon = leaflet ? createIcon('#f97316', '', 6) : undefined;
   const dgoIcon = leaflet ? createIcon('#a855f7', '', 10) : undefined;
-  const searchIcon = leaflet ? createIcon('#6366f1', '📍', 0) : undefined;
+  const searchIcon = leaflet ? leaflet.divIcon({ className: '', html: '<div style="font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));text-align:center;line-height:1;">📍</div>', iconSize: [28, 28], iconAnchor: [14, 28] }) : undefined;
 
   const NodePopup = ({ node, type }: { node: NodeData; type: string }) => {
     const colors: Record<string, string> = { pop: 'text-red-600', cto: 'text-green-600', ce: 'text-blue-600', client: 'text-orange-600', dgo: 'text-purple-600' };
@@ -133,14 +133,11 @@ export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers
   return (
     <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} className="h-full w-full" style={{ height: '100%', width: '100%' }} zoomControl={false}>
       <ZoomControl position="bottomright" />
-      <LayersControl position="bottomleft">
-        <BaseLayer checked name="Mapa de Ruas">
-          <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        </BaseLayer>
-        <BaseLayer name="Satélite">
-          <TileLayer attribution='&copy; <a href="https://www.esri.com">Esri</a>' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
-        </BaseLayer>
-      </LayersControl>
+      {satelliteView ? (
+        <TileLayer attribution='&copy; <a href="https://www.esri.com">Esri</a>' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+      ) : (
+        <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      )}
       <MapRefHandler setMapRef={setMapRef} />
       <ClickHandler onMapClick={onMapClick} onDblClick={drawMode === 'path' ? onDblClick : undefined} onRightClick={drawMode === 'path' ? onRightClick : undefined} />
 

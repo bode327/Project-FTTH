@@ -91,6 +91,7 @@ export default function NetworkMapPage() {
   const [showLegend, setShowLegend] = useState(true);
   const [showLayers, setShowLayers] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
+  const [satelliteView, setSatelliteView] = useState(false);
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
   const canEdit = userRole === 'superadmin' || userRole === 'admin';
 
@@ -423,7 +424,6 @@ export default function NetworkMapPage() {
     mapRef.setView([loc.lat, loc.lng], 18);
     setSearchedLocation(loc);
     setShowSearchResults(false);
-    setSearchQuery('');
   };
 
   const cancelCableMode = () => { setCableStartNode(null); setTempLineEnd(null); setShowCableModal(false); };
@@ -513,6 +513,9 @@ export default function NetworkMapPage() {
                 })}
               </div>
             )}
+            <button onClick={() => { setSatelliteView(!satelliteView); }} className={`w-full text-left mt-1 px-3 py-1.5 text-xs rounded transition font-medium flex items-center gap-2 ${satelliteView ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              {satelliteView ? '🛰️' : '🗺️'} {satelliteView ? 'Satélite' : 'Mapa de Ruas'}
+            </button>
             <button onClick={() => setShowLegend(!showLegend)} className="flex items-center justify-between text-xs font-medium text-gray-500 border-t pt-2 mt-1">
               <span>Legenda</span>
               <span className="text-gray-400">{showLegend ? '−' : '+'}</span>
@@ -690,6 +693,7 @@ export default function NetworkMapPage() {
           onDblClick={finishPath}
           onRightClick={undoPathPoint}
           searchedLocation={searchedLocation}
+          satelliteView={satelliteView}
         />
       )}
 
