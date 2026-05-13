@@ -1,3 +1,65 @@
-backend/node_modules
-frontend/node_modules
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
 backend/dist/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Docker volumes (sensitive)
+postgres_data/
+redis_data/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Credentials and secrets
+*.pem
+*.key
+credentials.json
+service-account.json
+*.secret
+
+# Local development
+.local/
+.tmp/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Backup files
+*.bak
+*.backup
+*.sql.gz
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# KML files (network data)
+*.kml
+
+# Next.js build artifacts
+frontend/src/app/page.js

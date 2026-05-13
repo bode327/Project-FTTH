@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,19 +7,15 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333/api';
-    fetch(`${apiUrl}/auth/status`)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) { router.push('/login'); return; }
+    fetch(apiUrl + '/auth/status')
       .then(res => res.json())
       .then(data => {
-        if (data.isSetup) {
-          router.push('/login');
-        } else {
-          router.push('/setup');
-        }
+        if (data.isSetup) router.push('/login');
+        else router.push('/setup');
       })
-      .catch(() => {
-        router.push('/login'); // Fallback in case of server offline error handling
-      });
+      .catch(() => { router.push('/login'); });
   }, [router]);
 
   return (
