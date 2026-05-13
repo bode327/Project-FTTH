@@ -12,16 +12,22 @@
 
 ```bash
 # Full stack (all services)
-docker-compose up --build -d
+docker compose up --build -d
 
-# Backend only (dev mode with hot reload)
-cd backend && npm run dev
+# Backend only (build + restart)
+cd backend && npm run build && docker compose up -d backend
 
-# Frontend only
-cd frontend && npm run dev
+# Frontend only (build + restart)
+cd frontend && npm run build && docker compose up -d frontend
 
-# Backend tests/build
-cd backend && npm run build
+# Rebuild both
+docker compose build frontend backend && docker compose up -d frontend backend
+
+# Database access
+docker compose exec db psql -U ftth_admin -d ftth_saas
+
+# Backend logs
+docker compose logs backend --tail=50 -f
 ```
 
 **Ports**: Frontend 3000, Backend 3333, PostgreSQL 5432, Redis 6379
@@ -36,41 +42,56 @@ Tenant isolation is enforced at the **database level via RLS**, not application 
 
 See: `backend/src/middleware/auth.ts`, `backend/src/db.ts`, `backend/db/init.sql`
 
-## Async Network Calculations
+## Map Editor
 
-Network recalculations (dBm propagation) run async via BullMQ:
+Map at `/map` features:
+- **Draw Path**: Multi-point cable drawing (like Google Earth) with right-click undo
+- **Cable Types**: Configurable color, stroke width, dashed/solid per cable type in Catalog
+- **Satellite View**: Toggle between OpenStreetMap and ESRI satellite tiles
+- **Geocoding Search**: Search by address (Nominatim), coordinates (decimal/DMS), or node name
+- **Search Marker**: Pin appears on searched location
+- **Project Tree**: Folder view of projects/areas on the left panel
+- **Collapsible Panels**: Layers, legend, and tools minimize to avoid overlap
+- **Role-based UI**: Editing tools visible only for admin/superadmin users
 
-- Trigger: `POST /api/network/calculate` (returns `jobId`)
-- Monitor: `GET /api/jobs/:id`
-- Never run heavy calculations synchronously in HTTP handlers
+## KML Import
 
-## Next.js 16
+- **Preview step**: Upload → Analyze → See structure → Confirm import
+- All Point placemarks become CTOs, LineStrings become cables
+- KML folder hierarchy becomes Projects (city) and Areas (neighborhood)
+- Max file size: 50MB
 
-This project uses Next.js 16 with breaking changes from older versions. Before writing React components, check `node_modules/next/dist/docs/` for current API conventions.
+## Database Migrations
 
-## Database
+`init.sql` only runs on first DB container startup. For existing databases, run ALTER TABLE statements manually. Key migrations needed for old DBs:
 
-- Schema auto-initializes via `backend/db/init.sql` (mounted in docker-compose)
-- GIST spatial indexes on `network_nodes.geom` and `cables.geom` are required for performance
-- Two distance metrics on cables: `calculated_distance_km` (map geometry) vs `measured_distance_km` (OTDR/field)
+```sql
+ALTER TABLE cables ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+ALTER TABLE cables ADD COLUMN IF NOT EXISTS cable_type_id UUID REFERENCES catalog_cable_type(id);
+ALTER TABLE catalog_cable_type ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#3b82f6';
+ALTER TABLE catalog_cable_type ADD COLUMN IF NOT EXISTS stroke_width INTEGER DEFAULT 3;
+ALTER TABLE catalog_cable_type ADD COLUMN IF NOT EXISTS dashed BOOLEAN DEFAULT false;
+ALTER TABLE splice_trays ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+```
+
+See the migration DO block at the end of `backend/db/init.sql`.
 
 ## Key Files
 
 | Path | Purpose |
 |------|---------|
 | `docker-compose.yml` | Service orchestration |
-| `backend/db/init.sql` | PostGIS schema + RLS policies |
+| `backend/db/init.sql` | PostGIS schema + RLS policies + migrations |
 | `backend/src/middleware/auth.ts` | JWT validation + tenant extraction |
 | `backend/src/db.ts` | RLS query wrapper |
-| `backend/src/jobs/networkWorker.ts` | BullMQ job processor |
-| `frontend/src/components/HelpIcon.tsx` | Contextual help for technicians |
-| `.env.example` | Environment variables template |
+| `backend/src/routes/kml.ts` | KML import/export (preview + import) |
+| `frontend/src/app/(app)/map/page.tsx` | Map editor main page |
+| `frontend/src/app/(app)/map/MapView.tsx` | Leaflet map component |
+| `frontend/src/app/(app)/catalogs/page.tsx` | Cable type catalog with visual config |
+| `frontend/src/app/(app)/catalogs/page.tsx` | Cable type catalog with visual config |
 
-## Mock Auth for Testing
+## Login
 
-```bash
-# Get a test JWT (dev only)
-curl -X POST http://localhost:3333/api/auth/mock \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id":"00000000-0000-0000-0000-000000000001","user_id":"user1"}'
-```
+- **Admin**: admin@infotecmg.net / admin123
+- Login stores token + userRole in localStorage
+- Superadmin access via /superadmin (promote user role in DB)

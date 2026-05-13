@@ -19,6 +19,7 @@ interface Props {
   pathPoints?: { lat: number; lng: number }[];
   onDblClick?: () => void;
   onRightClick?: () => void;
+  searchedLocation?: { lat: number; lng: number } | null;
 }
 
 const DEFAULT_CENTER: [number, number] = [-19.9, -43.9];
@@ -46,7 +47,7 @@ function ClickHandler({ onMapClick, onDblClick, onRightClick }: { onMapClick: (l
   return null;
 }
 
-export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers, leaflet, getCableColor, onMapClick, setMapRef, cableStartNode, tempLineEnd, chainStartNode, drawMode, cableColor = '#6b7280', cableWidth = 3, pathPoints = [], onDblClick, onRightClick }: Props) {
+export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers, leaflet, getCableColor, onMapClick, setMapRef, cableStartNode, tempLineEnd, chainStartNode, drawMode, cableColor = '#6b7280', cableWidth = 3, pathPoints = [], onDblClick, onRightClick, searchedLocation }: Props) {
   const hasData = [...pops, ...ctos, ...ces, ...clients, ...dgos].filter(n => n.geom?.coordinates).length > 0;
 
   const allNodes = useMemo(() => [...pops, ...ctos, ...ces, ...clients, ...dgos], [pops, ctos, ces, clients, dgos]);
@@ -86,6 +87,7 @@ export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers
   const ceIcon = leaflet ? createIcon('#3b82f6', 'E', 10) : undefined;
   const clientIcon = leaflet ? createIcon('#f97316', '', 6) : undefined;
   const dgoIcon = leaflet ? createIcon('#a855f7', '', 10) : undefined;
+  const searchIcon = leaflet ? createIcon('#6366f1', '📍', 0) : undefined;
 
   const NodePopup = ({ node, type }: { node: NodeData; type: string }) => {
     const colors: Record<string, string> = { pop: 'text-red-600', cto: 'text-green-600', ce: 'text-blue-600', client: 'text-orange-600', dgo: 'text-purple-600' };
@@ -173,6 +175,12 @@ export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers
           positions={pathPoints.map(p => [p.lat, p.lng])}
           pathOptions={{ color: cableColor, weight: cableWidth, opacity: 0.7, dashArray: '10,6' }}
         />
+      )}
+
+      {searchedLocation && searchIcon && (
+        <Marker key="__search__" position={[searchedLocation.lat, searchedLocation.lng]} icon={searchIcon}>
+          <Popup><div className="text-sm"><span className="font-bold">Localização</span><br/>{searchedLocation.lat.toFixed(5)}, {searchedLocation.lng.toFixed(5)}</div></Popup>
+        </Marker>
       )}
 
       {layers.pops && pops.map(pop => (

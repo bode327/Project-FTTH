@@ -86,6 +86,7 @@ export default function NetworkMapPage() {
   const [locationResults, setLocationResults] = useState<{ display_name: string; lat: number; lng: number }[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchingLocation, setSearchingLocation] = useState(false);
+  const [searchedLocation, setSearchedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showProjectTree, setShowProjectTree] = useState(false);
   const [showLegend, setShowLegend] = useState(true);
   const [showLayers, setShowLayers] = useState(true);
@@ -412,6 +413,7 @@ export default function NetworkMapPage() {
     if (!node.geom?.coordinates || !mapRef) return;
     const [lng, lat] = node.geom.coordinates;
     mapRef.setView([lat, lng], 18);
+    setSearchedLocation({ lat, lng });
     setShowSearchResults(false);
     setSearchQuery('');
   };
@@ -419,6 +421,7 @@ export default function NetworkMapPage() {
   const centerOnLocation = (loc: { lat: number; lng: number }) => {
     if (!mapRef) return;
     mapRef.setView([loc.lat, loc.lng], 18);
+    setSearchedLocation(loc);
     setShowSearchResults(false);
     setSearchQuery('');
   };
@@ -686,6 +689,7 @@ export default function NetworkMapPage() {
           pathPoints={pathPoints}
           onDblClick={finishPath}
           onRightClick={undoPathPoint}
+          searchedLocation={searchedLocation}
         />
       )}
 
