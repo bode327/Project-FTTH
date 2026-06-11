@@ -30,6 +30,8 @@ import ruptureRoutes from './routes/rupture';
 import viabilityRoutes from './routes/viability';
 import fusionDiagramRoutes from './routes/fusionDiagram';
 import spliceTraysRoutes from './routes/spliceTrays';
+import legendRoutes from './routes/legend';
+import projectFoldersRoutes from './routes/projectFolders';
 import superadminRoutes from './routes/superadmin';
 import swapRoutes from './routes/swap';
 
@@ -108,6 +110,8 @@ app.use('/api/rupture', authenticateToken, ruptureRoutes);
 app.use('/api/viability', authenticateToken, viabilityRoutes);
 app.use('/api/fusion-diagram', authenticateToken, fusionDiagramRoutes);
 app.use('/api/splice-trays', authenticateToken, spliceTraysRoutes);
+app.use('/api/legend', authenticateToken, legendRoutes);
+app.use('/api/project-folders', authenticateToken, projectFoldersRoutes);
 
 app.use('/api/swap', swapRoutes);
 

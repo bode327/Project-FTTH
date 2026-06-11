@@ -10,6 +10,7 @@ export default function OltPage() {
   const [oltModels, setOltModels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingOlt, setEditingOlt] = useState<any>(null);
   const [form, setForm] = useState({ name: '', pop_id: '', catalog_olt_model_id: '', model: '', brand: '', slots_total: 16 });
   const [selectedOlt, setSelectedOlt] = useState<any>(null);
   const [slots, setSlots] = useState<any[]>([]);
@@ -35,11 +36,36 @@ export default function OltPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post(apiRoutes.olts, form);
+      if (editingOlt) {
+        await api.put(`${apiRoutes.olts}/${editingOlt.id}`, form);
+      } else {
+        await api.post(apiRoutes.olts, form);
+      }
       setShowForm(false);
+      setEditingOlt(null);
       setForm({ name: '', pop_id: '', catalog_olt_model_id: '', model: '', brand: '', slots_total: 16 });
       load();
     } catch (err: any) { alert(err.message); }
+  };
+
+  const handleEdit = (olt: any) => {
+    setEditingOlt(olt);
+    setForm({ name: olt.name, pop_id: olt.pop_id || '', catalog_olt_model_id: olt.catalog_olt_model_id || '', model: olt.model || '', brand: olt.brand || '', slots_total: olt.slots_total || 16 });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Excluir OLT? Esta ação não pode ser desfeita.')) return;
+    try {
+      await api.delete(`${apiRoutes.olts}/${id}`);
+      load();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingOlt(null);
+    setForm({ name: '', pop_id: '', catalog_olt_model_id: '', model: '', brand: '', slots_total: 16 });
   };
 
   const viewSlots = async (oltId: string) => {
@@ -66,12 +92,12 @@ export default function OltPage() {
           <h1 className="text-2xl font-bold text-gray-800">OLTs</h1>
           <HelpIcon title="OLT (Optical Line Termination)" description="OLT é o equipamento que converte sinais elétricos em ópticos. Cada OLT possui slots e portas PON que se conectam aos clientes." />
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">+ Novo OLT</button>
+        <button onClick={() => { setShowForm(true); setEditingOlt(null); setForm({ name: '', pop_id: '', catalog_olt_model_id: '', model: '', brand: '', slots_total: 16 }); }} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">+ Novo OLT</button>
       </div>
 
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="font-semibold mb-4">Cadastrar OLT</h3>
+          <h3 className="font-semibold mb-4">{editingOlt ? 'Editar OLT' : 'Cadastrar OLT'}</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Nome *</label>
@@ -83,6 +109,7 @@ export default function OltPage() {
                 <option value="">Selecione o POP</option>
                 {pops.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
+              <p className="text-xs text-gray-500 mt-1">Para desvincular, exclua o OLT primeiro.</p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Modelo do Catálogo</label>
@@ -104,8 +131,8 @@ export default function OltPage() {
               <input type="number" value={form.slots_total} onChange={e => setForm({...form, slots_total: parseInt(e.target.value)})} className="w-full px-3 py-2 border rounded-lg" />
             </div>
             <div className="md:col-span-3 flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">Salvar</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-200 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">{editingOlt ? 'Salvar' : 'Salvar'}</button>
+              <button type="button" onClick={handleCancel} className="bg-gray-200 px-4 py-2 rounded-lg text-sm">Cancelar</button>
             </div>
           </form>
         </div>
@@ -164,6 +191,8 @@ export default function OltPage() {
                   </td>
                   <td className="px-6 py-4 flex justify-end gap-2">
                     <button onClick={() => viewSlots(olt.id)} className="text-blue-600 text-sm hover:underline">Slots</button>
+                    <button onClick={() => handleEdit(olt)} className="text-gray-600 text-sm hover:underline">Editar</button>
+                    <button onClick={() => handleDelete(olt.id)} className="text-red-600 text-sm hover:underline">Excluir</button>
                   </td>
                 </tr>
               ))}

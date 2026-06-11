@@ -41,10 +41,10 @@ router.get('/path/:ctoId', async (req: AuthenticatedRequest, res) => {
           }
         }
         const splices = await queryWithRLS(req, 'SELECT * FROM splices WHERE fiber_a_id = $1 OR fiber_b_id = $1', [sp.input_fiber_id]);
-        for (const sp of splices.rows) {
-          totalLoss += parseFloat(sp.loss_db || FUSION_LOSS_DB);
+        for (const splice of splices.rows) {
+          totalLoss += parseFloat(splice.loss_db || FUSION_LOSS_DB);
           totalLoss += SPLICE_TRAY_LOSS_DB;
-          path.push({ type: 'splice', splice_type: sp.splice_type, loss: parseFloat(sp.loss_db || FUSION_LOSS_DB), tray_loss: SPLICE_TRAY_LOSS_DB });
+          path.push({ type: 'splice', splice_type: splice.splice_type, loss: parseFloat(splice.loss_db || FUSION_LOSS_DB), tray_loss: SPLICE_TRAY_LOSS_DB });
         }
       }
     }
@@ -52,9 +52,9 @@ router.get('/path/:ctoId', async (req: AuthenticatedRequest, res) => {
     for (const cl of clients.rows) {
       if (cl.fiber_id) {
         const splices = await queryWithRLS(req, 'SELECT * FROM splices WHERE fiber_a_id = $1 OR fiber_b_id = $1', [cl.fiber_id]);
-        for (const sp of splices.rows) {
-          totalLoss += parseFloat(sp.loss_db || FUSION_LOSS_DB);
-          path.push({ type: 'splice', splice_type: sp.splice_type, loss: parseFloat(sp.loss_db || FUSION_LOSS_DB) });
+        for (const splice of splices.rows) {
+          totalLoss += parseFloat(splice.loss_db || FUSION_LOSS_DB);
+          path.push({ type: 'splice', splice_type: splice.splice_type, loss: parseFloat(splice.loss_db || FUSION_LOSS_DB) });
         }
       }
     }

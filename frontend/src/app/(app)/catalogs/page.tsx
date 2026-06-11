@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
-type CatalogType = 'olt-model' | 'pon-card' | 'gbic' | 'ont' | 'switch' | 'router' | 'dio' | 'dgo' | 'rj' | 'splitter' | 'cable-type' | 'duct' | 'accessory' | 'network-asset' | 'fiber-color';
+type CatalogType = 'olt-model' | 'pon-card' | 'gbic' | 'ont' | 'switch' | 'router' | 'dio' | 'dgo' | 'rj' | 'splitter' | 'cable-type' | 'duct' | 'accessory' | 'fiber-color' | 'service-card';
 
 const TABS: { key: CatalogType; label: string }[] = [
   { key: 'olt-model', label: 'OLT Models' },
@@ -12,6 +12,7 @@ const TABS: { key: CatalogType; label: string }[] = [
   { key: 'ont', label: 'ONTs' },
   { key: 'switch', label: 'Switches' },
   { key: 'router', label: 'Routers' },
+  { key: 'service-card', label: 'Placas de Serviço' },
   { key: 'dio', label: 'DIOs' },
   { key: 'dgo', label: 'DGOs' },
   { key: 'rj', label: 'Caixas RJ' },
@@ -19,7 +20,6 @@ const TABS: { key: CatalogType; label: string }[] = [
   { key: 'cable-type', label: 'Tipos de Cabo' },
   { key: 'duct', label: 'Dutos' },
   { key: 'accessory', label: 'Acessórios' },
-  { key: 'network-asset', label: 'Ativos de Rede' },
   { key: 'fiber-color', label: 'Cores de Fibra' },
 ];
 
@@ -84,13 +84,26 @@ const FIELD_CONFIGS: Record<CatalogType, { label: string; type: string; options?
   'router': [
     { label: 'Brand', type: 'text', field: 'brand' },
     { label: 'Model', type: 'text', field: 'model' },
-    { label: 'Type', type: 'select', field: 'type', options: ['router', 'firewall'] },
-    { label: 'WAN Ports', type: 'number', field: 'wan_ports' },
-    { label: 'LAN Ports', type: 'number', field: 'lan_ports' },
+    { label: 'Tipo', type: 'select', field: 'type', options: ['fixed', 'modular'] },
+    { label: 'Slots de Expansão', type: 'number', field: 'slots' },
+    { label: 'Portas Ethernet', type: 'number', field: 'ethernet_ports' },
+    { label: 'Portas SFP', type: 'number', field: 'sfp_ports' },
+    { label: 'Portas SFP28', type: 'number', field: 'sfp28_ports' },
+    { label: 'Portas QSFP', type: 'number', field: 'qsfp_ports' },
+    { label: 'Portas QSFP28', type: 'number', field: 'qsfp28_ports' },
     { label: 'Throughput (Mbps)', type: 'number', field: 'throughput_mbps' },
     { label: 'VPN Support', type: 'checkbox', field: 'vpn_support' },
     { label: 'Firewall', type: 'checkbox', field: 'firewall' },
     { label: 'Max Power (W)', type: 'number', field: 'max_power_watts' },
+    { label: 'Description', type: 'textarea', field: 'description' },
+  ],
+  'service-card': [
+    { label: 'Brand', type: 'text', field: 'brand' },
+    { label: 'Model', type: 'text', field: 'model' },
+    { label: 'Categoria', type: 'select', field: 'category', options: ['pon', 'service', 'uplink', 'stacking', 'management', 'power', 'other'] },
+    { label: 'Tipo de Slot', type: 'select', field: 'slots_type', options: ['service', 'uplink', 'stacking', 'management', 'power'] },
+    { label: 'Ports', type: 'number', field: 'ports' },
+    { label: 'PON Type', type: 'text', field: 'pon_type' },
     { label: 'Description', type: 'textarea', field: 'description' },
   ],
   'dio': [
@@ -137,6 +150,7 @@ const FIELD_CONFIGS: Record<CatalogType, { label: string; type: string; options?
     { label: 'Tipo de capa', type: 'text', field: 'jacket_type' },
     { label: 'Compatível com duto', type: 'checkbox', field: 'duct_compatible' },
     { label: 'Descrição', type: 'textarea', field: 'description' },
+    { label: 'preview', type: 'preview', field: 'preview' },
   ],
   'duct': [
     { label: 'Name', type: 'text', field: 'name' },
@@ -146,18 +160,9 @@ const FIELD_CONFIGS: Record<CatalogType, { label: string; type: string; options?
     { label: 'Description', type: 'textarea', field: 'description' },
   ],
   'accessory': [
-    { label: 'Category', type: 'select', field: 'category', options: ['splice_sleeve', 'pigtail', 'adapter', 'connector', 'ferrule', 'other'] },
-    { label: 'Name', type: 'text', field: 'name' },
-    { label: 'Brand', type: 'text', field: 'brand' },
-    { label: 'Unit', type: 'text', field: 'unit' },
-    { label: 'Description', type: 'textarea', field: 'description' },
-  ],
-  'network-asset': [
-    { label: 'Categoria', type: 'select', field: 'category', options: ['patchcord', 'pigtail', 'odf', 'adaptador', 'conector', 'tubete', 'embreagem', 'caixa_passagem', 'lancamento', 'cordao', 'splitter_outdoor', 'equipamento_cliente', 'outro'] },
+    { label: 'Categoria', type: 'select', field: 'category', options: ['conector', 'adaptador', 'splitter_outdoor', 'pigtail', 'patchcord', 'embreagem', 'tubete', 'splice_sleeve', 'caixa_passagem', 'lancamento', 'equipamento_cliente', 'outro'] },
     { label: 'Nome', type: 'text', field: 'name' },
     { label: 'Marca', type: 'text', field: 'brand' },
-    { label: 'Modelo', type: 'text', field: 'model' },
-    { label: 'Especificações', type: 'textarea', field: 'specifications' },
     { label: 'Unidade', type: 'text', field: 'unit' },
     { label: 'Estoque', type: 'number', field: 'stock_quantity' },
     { label: 'Estoque Mínimo', type: 'number', field: 'min_stock' },
@@ -165,11 +170,27 @@ const FIELD_CONFIGS: Record<CatalogType, { label: string; type: string; options?
     { label: 'Descrição', type: 'textarea', field: 'description' },
   ],
   'fiber-color': [
-    { label: 'Sequence', type: 'number', field: 'sequence' },
-    { label: 'Color', type: 'text', field: 'color' },
-    { label: 'Color Code', type: 'text', field: 'color_code' },
+    { label: 'Sequência', type: 'number', field: 'sequence' },
+    { label: 'Cor', type: 'color', field: 'color' },
+    { label: 'Nome da Cor', type: 'text', field: 'name' },
+    { label: 'Código', type: 'text', field: 'color_code' },
   ],
 };
+
+const FIBER_COLORS = [
+  { sequence: 1, color: '#9ACA00', name: 'Verde' },
+  { sequence: 2, color: '#FFFF00', name: 'Amarelo' },
+  { sequence: 3, color: '#FFFFFF', name: 'Branco' },
+  { sequence: 4, color: '#0000FF', name: 'Azul' },
+  { sequence: 5, color: '#FF0000', name: 'Vermelho' },
+  { sequence: 6, color: '#9933FF', name: 'Violeta' },
+  { sequence: 7, color: '#8B4513', name: 'Marrom' },
+  { sequence: 8, color: '#FF69B4', name: 'Rosa' },
+  { sequence: 9, color: '#000000', name: 'Preto' },
+  { sequence: 10, color: '#808080', name: 'Cinza' },
+  { sequence: 11, color: '#FFA500', name: 'Laranja' },
+  { sequence: 12, color: '#00FFFF', name: 'Aqua' },
+];
 
 const DISPLAY_COLUMNS: Record<CatalogType, string[]> = {
   'olt-model': ['brand', 'model', 'total_slots', 'max_power_watts', 'form_factor'],
@@ -177,7 +198,8 @@ const DISPLAY_COLUMNS: Record<CatalogType, string[]> = {
   'gbic': ['model', 'type', 'wavelength_range', 'min_output_dbm', 'max_output_dbm', 'max_distance_km', 'brand'],
   'ont': ['brand', 'model', 'pon_compatibility', 'ports_gigabit', 'ports_voip', 'ports_catv', 'wifi_standard', 'wifi_max_mbps'],
   'switch': ['brand', 'model', 'type', 'layer', 'ports', 'sfp_slots', 'poe_ports'],
-  'router': ['brand', 'model', 'type', 'wan_ports', 'lan_ports', 'throughput_mbps', 'vpn_support', 'firewall'],
+  'router': ['brand', 'model', 'type', 'slots', 'ethernet_ports', 'sfp_ports', 'sfp28_ports', 'qsfp_ports', 'qsfp28_ports', 'throughput_mbps', 'vpn_support', 'firewall'],
+  'service-card': ['brand', 'model', 'category', 'slots_type', 'ports', 'pon_type'],
   'dio': ['brand', 'model', 'total_ports', 'type', 'height_units', 'splice_capacity'],
   'dgo': ['model', 'brand', 'capacity_fibers', 'splice_trays', 'max_splitters', 'mounting'],
   'rj': ['model', 'brand', 'type', 'capacity_fibers', 'built_in_splitter', 'mounting'],
@@ -185,8 +207,7 @@ const DISPLAY_COLUMNS: Record<CatalogType, string[]> = {
   'cable-type': ['name', 'fiber_count', 'color', 'stroke_width', 'dashed'],
   'duct': ['name', 'diameter_mm', 'type', 'color'],
   'accessory': ['category', 'name', 'brand', 'unit'],
-  'network-asset': ['category', 'name', 'brand', 'model', 'stock_quantity', 'min_stock', 'cost'],
-  'fiber-color': ['sequence', 'color', 'color_code'],
+  'fiber-color': ['sequence', 'color', 'name', 'color_code'],
 };
 
 function getEmptyForm(type: CatalogType): Record<string, any> {
@@ -342,59 +363,111 @@ export default function CatalogsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               {fields.map(f => (
                 <div key={f.field}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{f.label}</label>
-                  {f.type === 'textarea' ? (
-                    <textarea
-                      value={form[f.field] || ''}
-                      onChange={e => handleFieldChange(f.field, e.target.value, f.type)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      rows={2}
-                    />
-                  ) : f.type === 'checkbox' && f.options ? (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {f.options.map(opt => (
-                        <label key={opt} className="flex items-center gap-2">
+                  {f.type === 'preview' ? (
+                    <div className="mt-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
+                      <div className="bg-gray-100 p-4 rounded-lg">
+                        <svg width="100%" height="40">
+                          <line
+                            x1="10"
+                            y1="20"
+                            x2="390"
+                            y2="20"
+                            stroke={form.color || '#3b82f6'}
+                            strokeWidth={parseInt(form.stroke_width) || 3}
+                            strokeDasharray={form.dashed ? '8,4' : '0'}
+                          />
+                        </svg>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          Espessura: {form.stroke_width || 3}px | Cor: {form.color || '#3b82f6'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{f.label}</label>
+                      {f.type === 'textarea' ? (
+                        <textarea
+                          value={form[f.field] || ''}
+                          onChange={e => handleFieldChange(f.field, e.target.value, f.type)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          rows={2}
+                        />
+                      ) : f.type === 'checkbox' && f.options ? (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {f.options.map(opt => (
+                            <label key={opt} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={(form[f.field] || []).includes(opt)}
+                                onChange={() => handleFieldChange(f.field, opt, f.type, f.options)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-600">{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : f.type === 'checkbox' ? (
+                        <label className="flex items-center gap-2 mt-2">
                           <input
                             type="checkbox"
-                            checked={(form[f.field] || []).includes(opt)}
-                            onChange={() => handleFieldChange(f.field, opt, f.type, f.options)}
+                            checked={!!form[f.field]}
+                            onChange={e => handleFieldChange(f.field, e.target.checked, f.type)}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
-                          <span className="text-sm text-gray-600">{opt}</span>
+                          <span className="text-sm text-gray-500">{form[f.field] ? 'Sim' : 'Não'}</span>
                         </label>
-                      ))}
-                    </div>
-                  ) : f.type === 'checkbox' ? (
-                    <label className="flex items-center gap-2 mt-2">
-                      <input
-                        type="checkbox"
-                        checked={!!form[f.field]}
-                        onChange={e => handleFieldChange(f.field, e.target.checked, f.type)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-500">{form[f.field] ? 'Sim' : 'Não'}</span>
-                    </label>
-                  ) : f.type === 'select' && f.options ? (
-                    <select
-                      value={form[f.field] || ''}
-                      onChange={e => handleFieldChange(f.field, e.target.value, f.type)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    >
-                      <option value="">Selecione</option>
-                      {f.options.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type={f.type}
-                      value={form[f.field] || ''}
-                      onChange={e => handleFieldChange(f.field, e.target.value, f.type)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
+                      ) : f.type === 'select' && f.options ? (
+                        <select
+                          value={form[f.field] || ''}
+                          onChange={e => handleFieldChange(f.field, e.target.value, f.type)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        >
+                          <option value="">Selecione</option>
+                          {f.options.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : f.type === 'color' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={form[f.field] || '#3b82f6'}
+                            onChange={e => handleFieldChange(f.field, e.target.value, f.type)}
+                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-500">{form[f.field] || '#3b82f6'}</span>
+                        </div>
+                      ) : (
+                        <input
+                          type={f.type}
+                          value={form[f.field] || ''}
+                          onChange={e => handleFieldChange(f.field, e.target.value, f.type)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               ))}
+              {activeTab === 'fiber-color' && !editItem && (
+                <div className="col-span-full mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Cores ABNT (Padrão FTTH)</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {FIBER_COLORS.map(c => (
+                      <button
+                        key={c.sequence}
+                        type="button"
+                        onClick={() => setForm({ sequence: c.sequence, color: c.color, name: c.name, color_code: c.name })}
+                        className="flex items-center gap-2 px-3 py-1 rounded-full border border-gray-300 hover:border-blue-500 transition"
+                      >
+                        <span className="w-5 h-5 rounded-full border" style={{ backgroundColor: c.color }} />
+                        <span className="text-xs">{c.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <button

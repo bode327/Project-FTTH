@@ -9,7 +9,7 @@ router.use(authenticateToken);
 router.get('/', async (req: AuthenticatedRequest, res) => {
   try {
     const { area_id } = req.query;
-    let query = 'SELECT id, tenant_id, area_id, name, address, capacity, status, ST_AsGeoJSON(geom) as geom FROM ces';
+    let query = 'SELECT id, tenant_id, area_id, name, address, capacity, status, ST_AsGeoJSON(geom) as geom, icon_id FROM ces';
     const params: any[] = [];
     if (area_id) { query += ' WHERE area_id = $1'; params.push(area_id); }
     query += ' ORDER BY name';

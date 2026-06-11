@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { apiRoutes } from '@/lib/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://crm.infotecmg.net/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://crm.infotecmg.net';
 
 interface KmlPreview {
   totalPoints: number;
   totalCables: number;
-  pathCounts: { path: string; points: number; cables: number }[];
-  styleSamples: string[];
-  samplePoints: { name: string; styleUrl: string; path: string }[];
-  sampleCables: { name: string; styleUrl: string; path: string }[];
+  uniquePaths: string[];
+  pathCounts?: { path: string; points: number; cables: number }[];
+  styleSamples?: string[];
+  samplePoints?: { name: string; styleUrl: string; path: string }[];
+  sampleCables?: { name: string; styleUrl: string; path: string }[];
 }
 
 interface ImportResult {
@@ -66,7 +66,7 @@ export default function KMLPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch(`${API_BASE}/api/kml/preview`, {
+      const res = await fetch(`${API_BASE}/kml/preview`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
@@ -97,7 +97,7 @@ export default function KMLPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch(`${API_BASE}${apiRoutes.kmlImport}`, {
+      const res = await fetch(`${API_BASE}/kml/import`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
@@ -118,11 +118,11 @@ export default function KMLPage() {
   };
 
   const handleExport = () => {
-    window.open(`${API_BASE}${apiRoutes.kmlExport}`, '_blank');
+    window.open(`${API_BASE}/kml/export`, '_blank');
   };
 
   const handleTemplate = () => {
-    window.open(`${API_BASE}${apiRoutes.kmlTemplate}`, '_blank');
+    window.open(`${API_BASE}/kml/template`, '_blank');
   };
 
   const handleClear = () => {
@@ -261,26 +261,27 @@ export default function KMLPage() {
               <div>
                 <h3 className="font-semibold text-sm text-gray-700 mb-2">Estrutura de pastas detectada:</h3>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto">
-                  {preview.pathCounts.length === 0 ? (
-                    <p className="text-sm text-gray-500">Sem hierarquia de pastas detectada. Os dados serão importados sem projeto/área.</p>
-                  ) : (
+                  {preview.uniquePaths && preview.uniquePaths.length > 0 ? (
                     <div className="space-y-1">
-                      {preview.pathCounts.slice(0, 10).map((p, i) => (
-                        <div key={i} className="text-xs">
-                          <span className="font-mono text-gray-400 mr-2">{p.path.split(' > ').map((_, j) => j === 0 ? '📁' : '  ↳').join('')}</span>
-                          <span className="font-medium text-gray-700">{p.path.split(' > ').pop()}</span>
-                          <span className="ml-2 text-gray-400">({p.points} pts, {p.cables} cabos)</span>
+                      {preview.uniquePaths.slice(0, 10).map((p, i) => (
+                        <div key={i} className="py-1 border-b last:border-b-0">
+                          <div className="font-medium text-sm">{p || 'Sem pasta'}</div>
+                          <div className="text-xs text-gray-500">
+                            {preview.totalPoints} pontos, {preview.totalCables} cabos
+                          </div>
                         </div>
                       ))}
-                      {preview.pathCounts.length > 10 && (
-                        <p className="text-xs text-gray-400 mt-1">... e mais {preview.pathCounts.length - 10} pastas</p>
+                      {preview.uniquePaths.length > 10 && (
+                        <p className="text-xs text-gray-400 mt-1">... e mais {preview.uniquePaths.length - 10} pastas</p>
                       )}
                     </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Nenhuma pasta encontrada</p>
                   )}
                 </div>
               </div>
 
-              {preview.samplePoints.length > 0 && (
+              {preview.samplePoints && preview.samplePoints.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-sm text-gray-700 mb-2">Exemplos de CTOs:</h3>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1">

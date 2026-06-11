@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
 interface Router {
@@ -308,8 +308,8 @@ export default function RoutersPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {routers.map(r => (
-                <>
-                  <tr key={r.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}>
+                <Fragment key={r.id}>
+                  <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}>
                     <td className="px-6 py-4 font-medium text-gray-800">{r.name}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{getCatalogDisplay(r)}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{r.serial_number || '-'}</td>
@@ -352,7 +352,7 @@ export default function RoutersPage() {
                             </thead>
                             <tbody className="divide-y">
                               {interfaces[r.id].map(iface => (
-                                <tr key={iface.id}>
+                                <Fragment key={iface.id}>
                                   {editingInterface?.id === iface.id ? (
                                     <>
                                       <td className="px-4 py-2">
@@ -390,7 +390,7 @@ export default function RoutersPage() {
                                       </td>
                                     </>
                                   ) : (
-                                    <>
+                                    <tr>
                                       <td className="px-4 py-2">{iface.interface_name}</td>
                                       <td className="px-4 py-2">{iface.type}</td>
                                       <td className="px-4 py-2">{iface.ip_address || '-'}</td>
@@ -403,9 +403,9 @@ export default function RoutersPage() {
                                       <td className="px-4 py-2 text-right">
                                         <button onClick={() => setEditingInterface(iface)} className="text-blue-600 text-xs hover:underline">Editar</button>
                                       </td>
-                                    </>
+                                    </tr>
                                   )}
-                                </tr>
+                                </Fragment>
                               ))}
                             </tbody>
                           </table>
@@ -415,7 +415,7 @@ export default function RoutersPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

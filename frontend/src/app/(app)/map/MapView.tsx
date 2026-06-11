@@ -1,12 +1,26 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, ZoomControl } from 'react-leaflet';
 
 interface NodeData { id: string; name: string; address?: string; geom?: any; status?: string; capacity?: number; installed_splitters?: number; plan_mbps?: number; ont_serial?: string; vlan?: number; splitter_ratio?: string; type?: string; }
 interface CableData { id: string; name?: string; geom?: any; status: string; cable_type?: string; fiber_count?: number; used_fibers?: number; calculated_distance_km?: number; total_fibers?: number; node_a_name?: string; node_b_name?: string; node_a_id?: string; node_b_id?: string; cable_type_id?: string; cable_type_name?: string; cable_color?: string; cable_width?: number; cable_dashed?: boolean; }
 interface LayerVisibility { pops: boolean; ctos: boolean; ces: boolean; clients: boolean; cables: boolean; dgos: boolean; }
 type DrawMode = 'idle' | 'node' | 'cable' | 'chain' | 'path';
+interface ContextMenuItem { label: string; icon?: string; onClick?: () => void; className?: string; }
+
+function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: ContextMenuItem[]; onClose: () => void }) {
+  return (
+    <div className="fixed bg-white rounded-lg shadow-xl border py-1 z-[2000] min-w-48" style={{ left: x, top: y }}>
+      {items.map((item, i) => (
+        <button key={i} onClick={() => { item.onClick?.(); onClose(); }} className={`w-full text-left px-4 py-2 text-sm hover:bg-blue-50 flex items-center gap-2 ${item.className || ''}`}>
+          {item.icon && <span>{item.icon}</span>}<span>{item.label}</span>
+        </button>
+      ))}
+      <div className="border-t mt-1 pt-1"><button onClick={onClose} className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-50">Fechar</button></div>
+    </div>
+  );
+}
 
 function NodePopup({ node, type }: { node: NodeData; type: string }) {
   const colors: Record<string, string> = { pop: 'text-red-600', cto: 'text-green-600', ce: 'text-blue-600', client: 'text-orange-600', dgo: 'text-purple-600' };
@@ -52,6 +66,11 @@ interface Props {
   onRightClick?: () => void;
   searchedLocation?: { lat: number; lng: number } | null;
   satelliteView?: boolean;
+  onEditNode?: (node: NodeData, type: string) => void;
+  onDeleteNode?: (node: NodeData, type: string) => void;
+  onCenterOnNode?: (node: NodeData) => void;
+  onEditIcon?: (node: NodeData, type: string) => void;
+  getNodeIconUrl?: (node: NodeData) => string;
 }
 
 const DEFAULT_CENTER: [number, number] = [-19.9, -43.9];
@@ -68,19 +87,22 @@ function ClickHandler({ onMapClick, onDblClick, onRightClick }: { onMapClick: (l
   useEffect(() => {
     const handler = (e: any) => { onMapClick(e.latlng.lat, e.latlng.lng); };
     map.on('click', handler);
-    if (onDblClick) {
-      map.on('dblclick', (e: any) => { e.originalEvent.preventDefault(); onDblClick(); });
-    }
-    if (onRightClick) {
-      map.on('contextmenu', (e: any) => { e.originalEvent.preventDefault(); onRightClick(); });
-    }
+    if (onDblClick) map.on('dblclick', (e: any) => { e.originalEvent.preventDefault(); onDblClick(); });
+    if (onRightClick) map.on('contextmenu', (e: any) => { e.originalEvent.preventDefault(); onRightClick(); });
     return () => { map.off('click', handler); if (onDblClick) map.off('dblclick'); if (onRightClick) map.off('contextmenu'); };
   }, [map, onMapClick, onDblClick, onRightClick]);
   return null;
 }
 
-export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers, leaflet, getCableColor, onMapClick, setMapRef, cableStartNode, tempLineEnd, chainStartNode, drawMode, cableColor = '#6b7280', cableWidth = 3, pathPoints = [], onDblClick, onRightClick, searchedLocation, satelliteView }: Props) {
+export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers, leaflet, getCableColor, onMapClick, setMapRef, cableStartNode, tempLineEnd, chainStartNode, drawMode, cableColor = '#6b7280', cableWidth = 3, pathPoints = [], onDblClick, onRightClick, searchedLocation, satelliteView, onEditNode, onDeleteNode, onCenterOnNode, onEditIcon, getNodeIconUrl }: Props) {
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: NodeData; type: string } | null>(null);
   const hasData = [...pops, ...ctos, ...ces, ...clients, ...dgos].filter(n => n.geom?.coordinates).length > 0;
+
+  useEffect(() => {
+    const close = () => setContextMenu(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, []);
 
   const allNodes = useMemo(() => [...pops, ...ctos, ...ces, ...clients, ...dgos], [pops, ctos, ces, clients, dgos]);
 
@@ -105,7 +127,12 @@ export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers
     return '#94a3b8';
   }, [drawMode, cableColor]);
 
-  const createIcon = (color: string, label: string, size: number) => {
+  const createIcon = (iconUrl: string) => {
+    if (!leaflet) return undefined;
+    return leaflet.icon({ iconUrl, iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32] });
+  };
+
+  const createDivIcon = (color: string, label: string, size: number) => {
     if (!leaflet) return undefined;
     return leaflet.divIcon({
       className: 'custom-marker',
@@ -114,12 +141,49 @@ export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers
     });
   };
 
-  const popIcon = leaflet ? createIcon('#ef4444', 'P', 14) : undefined;
-  const ctoIcon = leaflet ? createIcon('#22c55e', 'C', 10) : undefined;
-  const ceIcon = leaflet ? createIcon('#3b82f6', 'E', 10) : undefined;
-  const clientIcon = leaflet ? createIcon('#f97316', '', 6) : undefined;
-  const dgoIcon = leaflet ? createIcon('#a855f7', '', 10) : undefined;
+  const BASE = '/assets/kml-icons';
+  const pushpinDefaults = [
+    { id: 'red-pushpin', url: `${BASE}/pushpin/red-pushpin.png` },
+    { id: 'ylw-pushpin', url: `${BASE}/pushpin/ylw-pushpin.png` },
+    { id: 'grn-pushpin', url: `${BASE}/pushpin/grn-pushpin.png` },
+    { id: 'ltblu-pushpin', url: `${BASE}/pushpin/ltblu-pushpin.png` },
+    { id: 'purple-pushpin', url: `${BASE}/pushpin/purple-pushpin.png` },
+    { id: 'pink-pushpin', url: `${BASE}/pushpin/pink-pushpin.png` },
+    { id: 'wht-pushpin', url: `${BASE}/pushpin/wht-pushpin.png` },
+  ];
+  const paddleDefaults = [
+    { id: 'paddle/red-circle', url: `${BASE}/paddle/red-circle.png` },
+    { id: 'paddle/ylw-circle', url: `${BASE}/paddle/ylw-circle.png` },
+    { id: 'paddle/grn-circle', url: `${BASE}/paddle/grn-circle.png` },
+    { id: 'paddle/blu-circle', url: `${BASE}/paddle/blu-circle.png` },
+    { id: 'paddle/purple-circle', url: `${BASE}/paddle/purple-circle.png` },
+    { id: 'paddle/red-diamond', url: `${BASE}/paddle/red-diamond.png` },
+    { id: 'paddle/ylw-diamond', url: `${BASE}/paddle/ylw-diamond.png` },
+  ];
+
+  const getNodeDefaultIcon = (node: NodeData, type: string) => {
+    if (getNodeIconUrl) return createIcon(getNodeIconUrl(node));
+    const defaults: Record<string, typeof pushpinDefaults[0][]> = {
+      pop: pushpinDefaults, cto: pushpinDefaults, ce: pushpinDefaults, client: pushpinDefaults, dgo: pushpinDefaults
+    };
+    const d = defaults[type] || pushpinDefaults;
+    return createIcon(d[0].url);
+  };
+
+  const popIcon = leaflet ? getNodeDefaultIcon({ id: '' } as NodeData, 'pop') : undefined;
+  const ctoIcon = leaflet ? getNodeDefaultIcon({ id: '' } as NodeData, 'cto') : undefined;
+  const ceIcon = leaflet ? getNodeDefaultIcon({ id: '' } as NodeData, 'ce') : undefined;
+  const clientIcon = leaflet ? getNodeDefaultIcon({ id: '' } as NodeData, 'client') : undefined;
+  const dgoIcon = leaflet ? getNodeDefaultIcon({ id: '' } as NodeData, 'dgo') : undefined;
   const searchIcon = leaflet ? leaflet.divIcon({ className: '', html: '<div style="font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));text-align:center;line-height:1;">📍</div>', iconSize: [28, 28], iconAnchor: [14, 28] }) : undefined;
+
+  const getIconForNode = (node: NodeData, type: string) => {
+    if (getNodeIconUrl) {
+      const url = getNodeIconUrl(node);
+      return createIcon(url);
+    }
+    return null;
+  };
 
   const getNodeType = (node: NodeData): string => {
     if (pops.some(p => p.id === node.id)) return 'pop';
@@ -179,41 +243,69 @@ export default function MapView({ pops, ctos, ces, clients, cables, dgos, layers
         </Marker>
       )}
 
-      {layers.pops && pops.map(pop => (
-        pop.geom?.coordinates && popIcon && (
-          <Marker key={pop.id} position={[pop.geom.coordinates[1], pop.geom.coordinates[0]]} icon={popIcon}>
+      {layers.pops && pops.map(pop => {
+        const iconUrl = getNodeIconUrl ? getNodeIconUrl(pop) : '';
+        if (!iconUrl) return null;
+        const icon = createIcon(iconUrl);
+        return pop.geom?.coordinates && icon ? (
+          <Marker key={pop.id} position={[pop.geom.coordinates[1], pop.geom.coordinates[0]]} icon={icon} eventHandlers={{ contextmenu: (e: any) => { e.originalEvent?.preventDefault(); setContextMenu({ x: e.originalEvent?.clientX || e.containerPoint?.x || 0, y: e.originalEvent?.clientY || e.containerPoint?.y || 0, node: pop, type: 'pop' }); } }}>
             <Popup><NodePopup node={pop} type="pop" /></Popup>
           </Marker>
-        )
-      ))}
-      {layers.ctos && ctos.map(cto => (
-        cto.geom?.coordinates && ctoIcon && (
-          <Marker key={cto.id} position={[cto.geom.coordinates[1], cto.geom.coordinates[0]]} icon={ctoIcon}>
+        ) : null;
+      })}
+      {layers.ctos && ctos.map(cto => {
+        const iconUrl = getNodeIconUrl ? getNodeIconUrl(cto) : '';
+        if (!iconUrl) return null;
+        const icon = createIcon(iconUrl);
+        return cto.geom?.coordinates && icon ? (
+          <Marker key={cto.id} position={[cto.geom.coordinates[1], cto.geom.coordinates[0]]} icon={icon} eventHandlers={{ contextmenu: (e: any) => { e.originalEvent?.preventDefault(); setContextMenu({ x: e.originalEvent?.clientX || 0, y: e.originalEvent?.clientY || 0, node: cto, type: 'cto' }); } }}>
             <Popup><NodePopup node={cto} type="cto" /></Popup>
           </Marker>
-        )
-      ))}
-      {layers.ces && ces.map(ce => (
-        ce.geom?.coordinates && ceIcon && (
-          <Marker key={ce.id} position={[ce.geom.coordinates[1], ce.geom.coordinates[0]]} icon={ceIcon}>
+        ) : null;
+      })}
+      {layers.ces && ces.map(ce => {
+        const iconUrl = getNodeIconUrl ? getNodeIconUrl(ce) : '';
+        if (!iconUrl) return null;
+        const icon = createIcon(iconUrl);
+        return ce.geom?.coordinates && icon ? (
+          <Marker key={ce.id} position={[ce.geom.coordinates[1], ce.geom.coordinates[0]]} icon={icon} eventHandlers={{ contextmenu: (e: any) => { e.originalEvent?.preventDefault(); setContextMenu({ x: e.originalEvent?.clientX || 0, y: e.originalEvent?.clientY || 0, node: ce, type: 'ce' }); } }}>
             <Popup><NodePopup node={ce} type="ce" /></Popup>
           </Marker>
-        )
-      ))}
-      {layers.clients && clients.map(client => (
-        client.geom?.coordinates && clientIcon && (
-          <Marker key={client.id} position={[client.geom.coordinates[1], client.geom.coordinates[0]]} icon={clientIcon}>
+        ) : null;
+      })}
+      {layers.clients && clients.map(client => {
+        const iconUrl = getNodeIconUrl ? getNodeIconUrl(client) : '';
+        if (!iconUrl) return null;
+        const icon = createIcon(iconUrl);
+        return client.geom?.coordinates && icon ? (
+          <Marker key={client.id} position={[client.geom.coordinates[1], client.geom.coordinates[0]]} icon={icon} eventHandlers={{ contextmenu: (e: any) => { e.originalEvent?.preventDefault(); setContextMenu({ x: e.originalEvent?.clientX || 0, y: e.originalEvent?.clientY || 0, node: client, type: 'client' }); } }}>
             <Popup><NodePopup node={client} type="client" /></Popup>
           </Marker>
-        )
-      ))}
-      {layers.dgos && dgos.map(dgo => (
-        dgo.geom?.coordinates && dgoIcon && (
-          <Marker key={dgo.id} position={[dgo.geom.coordinates[1], dgo.geom.coordinates[0]]} icon={dgoIcon}>
+        ) : null;
+      })}
+      {layers.dgos && dgos.map(dgo => {
+        const iconUrl = getNodeIconUrl ? getNodeIconUrl(dgo) : '';
+        if (!iconUrl) return null;
+        const icon = createIcon(iconUrl);
+        return dgo.geom?.coordinates && icon ? (
+          <Marker key={dgo.id} position={[dgo.geom.coordinates[1], dgo.geom.coordinates[0]]} icon={icon} eventHandlers={{ contextmenu: (e: any) => { e.originalEvent?.preventDefault(); setContextMenu({ x: e.originalEvent?.clientX || 0, y: e.originalEvent?.clientY || 0, node: dgo, type: 'dgo' }); } }}>
             <Popup><NodePopup node={dgo} type="dgo" /></Popup>
           </Marker>
-        )
-      ))}
+        ) : null;
+      })}
+      {contextMenu && onEditNode && onDeleteNode && onCenterOnNode && onEditIcon && (
+        <ContextMenu
+          x={contextMenu.x} y={contextMenu.y}
+          items={[
+            { label: contextMenu.node.name, icon: '📍', className: 'font-bold text-gray-800 cursor-default hover:bg-transparent pointer-events-none' },
+            { label: 'Centralizar aqui', icon: '🎯', onClick: () => onCenterOnNode(contextMenu.node) },
+            { label: 'Editar dados', icon: '✏️', onClick: () => onEditNode(contextMenu.node, contextMenu.type) },
+            { label: 'Trocar ícone', icon: '🎨', onClick: () => onEditIcon(contextMenu.node, contextMenu.type) },
+            { label: 'Excluir', icon: '🗑️', onClick: () => onDeleteNode(contextMenu.node, contextMenu.type), className: 'text-red-600' },
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </MapContainer>
   );
 }

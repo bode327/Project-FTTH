@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Box, Typography, Button, TextField, Card, CardContent, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { api, apiRoutes } from '@/lib/api';
 
 export default function ClientsPage() {
@@ -18,43 +20,182 @@ export default function ClientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { await api.post(apiRoutes.clients, { name: form.name, address: form.address, phone: form.phone, plan_mbps: form.plan_mbps ? parseInt(form.plan_mbps) : null, cto_id: form.cto_id || null, ont_serial: form.ont_serial || null, vlan: form.vlan ? parseInt(form.vlan) : null }); setShowForm(false); setForm({ name: '', address: '', phone: '', plan_mbps: '', cto_id: '', ont_serial: '', vlan: '' }); load(); }
+    try { 
+      await api.post(apiRoutes.clients, { 
+        name: form.name, 
+        address: form.address, 
+        phone: form.phone, 
+        plan_mbps: form.plan_mbps ? parseInt(form.plan_mbps) : null, 
+        cto_id: form.cto_id || null, 
+        ont_serial: form.ont_serial || null, 
+        vlan: form.vlan ? parseInt(form.vlan) : null 
+      }); 
+      setShowForm(false); 
+      setForm({ name: '', address: '', phone: '', plan_mbps: '', cto_id: '', ont_serial: '', vlan: '' }); 
+      load(); 
+    }
     catch (err: any) { alert(err.message); }
   };
 
-  const statusColors: Record<string, string> = { active: 'bg-green-100 text-green-800', inactive: 'bg-gray-100 text-gray-800', suspended: 'bg-red-100 text-red-800' };
+  const getStatusChip = (status: string) => {
+    const statusConfig: Record<string, { color: 'success' | 'default' | 'error', label: string }> = {
+      active: { color: 'success', label: 'Ativo' },
+      inactive: { color: 'default', label: 'Inativo' },
+      suspended: { color: 'error', label: 'Suspenso' },
+    };
+    const config = statusConfig[status] || { color: 'default', label: status || 'Ativo' };
+    return <Chip label={config.label} color={config.color} size="small" sx={{ minHeight: 28 }} />;
+  };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Clientes</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">+ Novo Cliente</button>
-      </div>
+    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 1400, mx: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
+          Clientes
+        </Typography>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          startIcon={<AddIcon />}
+          onClick={() => setShowForm(!showForm)}
+          sx={{ minHeight: 44 }}
+        >
+          Novo Cliente
+        </Button>
+      </Box>
+
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><label className="block text-sm font-medium mb-1">Nome *</label><input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required className="w-full px-3 py-2 border rounded-lg" /></div>
-            <div><label className="block text-sm font-medium mb-1">CTO</label><select value={form.cto_id} onChange={e => setForm({...form, cto_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg"><option value="">Selecione CTO</option>{ctos.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-            <div><label className="block text-sm font-medium mb-1">Endereço</label><input value={form.address} onChange={e => setForm({...form, address: e.target.value})} className="w-full px-3 py-2 border rounded-lg" /></div>
-            <div><label className="block text-sm font-medium mb-1">Telefone</label><input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg" /></div>
-            <div><label className="block text-sm font-medium mb-1">Plano (Mbps)</label><input type="number" value={form.plan_mbps} onChange={e => setForm({...form, plan_mbps: e.target.value})} className="w-full px-3 py-2 border rounded-lg" /></div>
-            <div><label className="block text-sm font-medium mb-1">Serial ONT</label><input value={form.ont_serial} onChange={e => setForm({...form, ont_serial: e.target.value})} className="w-full px-3 py-2 border rounded-lg" /></div>
-            <div><label className="block text-sm font-medium mb-1">VLAN</label><input type="number" value={form.vlan} onChange={e => setForm({...form, vlan: e.target.value})} className="w-full px-3 py-2 border rounded-lg" /></div>
-            <div className="md:col-span-3 flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">Salvar</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-200 px-4 py-2 rounded-lg text-sm">Cancelar</button>
-            </div>
-          </form>
-        </div>
+        <Card sx={{ mb: 4 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+              Cadastrar Cliente
+            </Typography>
+            <form onSubmit={handleSubmit}>
+              <Grid container spacing={3}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="Nome *"
+                    value={form.name}
+                    onChange={e => setForm({...form, name: e.target.value})}
+                    required
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <FormControl fullWidth sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}>
+                    <InputLabel>CTO</InputLabel>
+                    <Select
+                      value={form.cto_id}
+                      label="CTO"
+                      onChange={e => setForm({...form, cto_id: e.target.value})}
+                    >
+                      <MenuItem value="">Selecione CTO</MenuItem>
+                      {ctos.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="Endereço"
+                    value={form.address}
+                    onChange={e => setForm({...form, address: e.target.value})}
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="Telefone"
+                    value={form.phone}
+                    onChange={e => setForm({...form, phone: e.target.value})}
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="Plano (Mbps)"
+                    type="number"
+                    value={form.plan_mbps}
+                    onChange={e => setForm({...form, plan_mbps: e.target.value})}
+                    slotProps={{ htmlInput: { step: '1' } }}
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="Serial ONT"
+                    value={form.ont_serial}
+                    onChange={e => setForm({...form, ont_serial: e.target.value})}
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    fullWidth
+                    label="VLAN"
+                    type="number"
+                    value={form.vlan}
+                    onChange={e => setForm({...form, vlan: e.target.value})}
+                    slotProps={{ htmlInput: { step: '1' } }}
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button type="submit" variant="contained" color="primary" sx={{ minHeight: 44 }}>
+                      Salvar
+                    </Button>
+                    <Button variant="outlined" onClick={() => setShowForm(false)} sx={{ minHeight: 44 }}>
+                      Cancelar
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            </form>
+          </CardContent>
+        </Card>
       )}
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        {loading ? <div className="p-8 text-center text-gray-500">Carregando...</div> : clients.length === 0 ? <div className="p-8 text-center text-gray-500">Nenhum cliente cadastrado.</div> : (
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">CTO</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefone</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plano</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th></tr></thead>
-            <tbody className="divide-y">{clients.map(c => <tr key={c.id} className="hover:bg-gray-50"><td className="px-6 py-4 font-medium">{c.name}</td><td className="px-6 py-4 text-sm">{c.cto_name || '-'}</td><td className="px-6 py-4 text-sm">{c.phone || '-'}</td><td className="px-6 py-4 text-sm">{c.plan_mbps ? `${c.plan_mbps} Mbps` : '-'}</td><td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs ${statusColors[c.status] || ''}`}>{c.status || 'active'}</span></td></tr>)}</tbody>
-          </table>
+
+      <Card>
+        {loading ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">Carregando...</Typography>
+          </Box>
+        ) : clients.length === 0 ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">Nenhum cliente cadastrado.</Typography>
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                  <TableCell sx={{ fontWeight: 600 }}>Nome</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>CTO</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Telefone</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Plano</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {clients.map(c => (
+                  <TableRow key={c.id} hover>
+                    <TableCell sx={{ fontWeight: 500 }}>{c.name}</TableCell>
+                    <TableCell>{c.cto_name || '-'}</TableCell>
+                    <TableCell>{c.phone || '-'}</TableCell>
+                    <TableCell>{c.plan_mbps ? `${c.plan_mbps} Mbps` : '-'}</TableCell>
+                    <TableCell>{getStatusChip(c.status || 'active')}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
-      </div>
-    </div>
+      </Card>
+    </Box>
   );
 }

@@ -1,6 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Box, Typography, Button, TextField, Card, CardContent, Grid, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { api, apiRoutes } from '@/lib/api';
 import HelpIcon from '@/components/HelpIcon';
 
@@ -27,87 +31,154 @@ export default function PopsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Excluir POP?')) return;
-    await api.delete(`${apiRoutes.pops}/${id}`);
-    load();
+    try {
+      await api.delete(`${apiRoutes.pops}/${id}`);
+      load();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err.message;
+      alert(msg.includes('vinculados') ? msg : 'Erro ao excluir POP.');
+    }
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-800">POPs / Headends</h1>
+    <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 1400, mx: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
+            POPs / Headends
+          </Typography>
           <HelpIcon title="POPs (Headends)" description="POP (Point of Presence) é o ponto central da sua rede óptica. Cada POP pode abrigar múltiplos OLTs e equipamentos." />
-        </div>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+        </Box>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          startIcon={<AddIcon />}
+          onClick={() => setShowForm(!showForm)}
+          sx={{ minHeight: 44 }}
+        >
           Novo POP
-        </button>
-      </div>
+        </Button>
+      </Box>
 
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="font-semibold text-gray-800 mb-4">Cadastrar POP</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-              <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="POP Centro" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
-              <input value={form.address} onChange={e => setForm({...form, address: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
-              <input type="number" step="any" value={form.lat} onChange={e => setForm({...form, lat: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
-              <input type="number" step="any" value={form.lng} onChange={e => setForm({...form, lng: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div className="md:col-span-2 flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">Salvar</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm">Cancelar</button>
-            </div>
-          </form>
-        </div>
+        <Card sx={{ mb: 4 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+              Cadastrar POP
+            </Typography>
+            <form onSubmit={handleSubmit}>
+              <Grid container spacing={3}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Nome *"
+                    value={form.name}
+                    onChange={e => setForm({...form, name: e.target.value})}
+                    required
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Endereço"
+                    value={form.address}
+                    onChange={e => setForm({...form, address: e.target.value})}
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Latitude"
+                    type="number"
+                    value={form.lat}
+                    onChange={e => setForm({...form, lat: e.target.value})}
+                    slotProps={{ htmlInput: { step: 'any' } }}
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label="Longitude"
+                    type="number"
+                    value={form.lng}
+                    onChange={e => setForm({...form, lng: e.target.value})}
+                    slotProps={{ htmlInput: { step: 'any' } }}
+                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button type="submit" variant="contained" color="primary" sx={{ minHeight: 44 }}>
+                      Salvar
+                    </Button>
+                    <Button variant="outlined" onClick={() => setShowForm(false)} sx={{ minHeight: 44 }}>
+                      Cancelar
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <Card>
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Carregando...</div>
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">Carregando...</Typography>
+          </Box>
         ) : pops.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <p className="mb-2">Nenhum POP cadastrado.</p>
-            <p className="text-sm text-gray-400">Clique em "Novo POP" para começar.</p>
-          </div>
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>Nenhum POP cadastrado.</Typography>
+            <Typography variant="body2" color="text.secondary">Clique em "Novo POP" para começar.</Typography>
+          </Box>
         ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Endereço</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Coordenadas</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {pops.map(pop => (
-                <tr key={pop.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium text-gray-800">{pop.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{pop.address || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {pop.lat && pop.lng ? `${parseFloat(pop.lat).toFixed(6)}, ${parseFloat(pop.lng).toFixed(6)}` : '-'}
-                  </td>
-                  <td className="px-6 py-4 flex justify-end gap-2">
-                    <a href={`/olts?pop=${pop.id}`} className="text-blue-600 text-sm hover:underline">OLTs</a>
-                    <button onClick={() => handleDelete(pop.id)} className="text-red-600 text-sm hover:underline">Excluir</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'grey.50' }}>
+                  <TableCell sx={{ fontWeight: 600 }}>Nome</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Endereço</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Coordenadas</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Ações</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pops.map(pop => (
+                  <TableRow key={pop.id} hover sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
+                    <TableCell sx={{ fontWeight: 500 }}>{pop.name}</TableCell>
+                    <TableCell>{pop.address || '-'}</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>
+                      {pop.lat && pop.lng ? `${parseFloat(pop.lat).toFixed(6)}, ${parseFloat(pop.lng).toFixed(6)}` : '-'}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button 
+                        component={Link} 
+                        href={`/olts?pop=${pop.id}`}
+                        size="small"
+                        sx={{ mr: 1, minHeight: 36 }}
+                      >
+                        OLTs
+                      </Button>
+                      <IconButton 
+                        onClick={() => handleDelete(pop.id)} 
+                        color="error"
+                        size="small"
+                        sx={{ minWidth: 36, minHeight: 36 }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
-      </div>
-    </div>
+      </Card>
+    </Box>
   );
 }

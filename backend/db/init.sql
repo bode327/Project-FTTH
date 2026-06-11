@@ -158,18 +158,40 @@ CREATE TABLE IF NOT EXISTS catalog_switch (
 );
 
 -- Router/Firewall Models
+CREATE TYPE router_type AS ENUM ('fixed', 'modular');
+CREATE TYPE card_category AS ENUM ('pon', 'service', 'uplink', 'stacking', 'management', 'power', 'other');
+
 CREATE TABLE IF NOT EXISTS catalog_router (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id),
     brand VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
-    type VARCHAR(30) DEFAULT 'router',
-    wan_ports INTEGER DEFAULT 2,
-    lan_ports INTEGER DEFAULT 4,
+    type router_type DEFAULT 'fixed',
+    slots INTEGER DEFAULT 0,
+    ethernet_ports INTEGER DEFAULT 0,
+    sfp_ports INTEGER DEFAULT 0,
+    sfp28_ports INTEGER DEFAULT 0,
+    qsfp_ports INTEGER DEFAULT 0,
+    qsfp28_ports INTEGER DEFAULT 0,
     throughput_mbps INTEGER,
     vpn_support BOOLEAN DEFAULT false,
     firewall BOOLEAN DEFAULT true,
     max_power_watts INTEGER,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tenant_id, brand, model)
+);
+
+-- Placas de Serviço ( PON cards, service cards, etc)
+CREATE TABLE IF NOT EXISTS catalog_service_card (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
+    brand VARCHAR(100) NOT NULL,
+    model VARCHAR(100) NOT NULL,
+    category card_category NOT NULL,
+    slots_type VARCHAR(50) DEFAULT 'service',
+    ports INTEGER DEFAULT 0,
+    pon_type VARCHAR(30),
     description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(tenant_id, brand, model)
@@ -682,46 +704,49 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- RLS Policies for all tables
+ALTER TABLE catalog_service_card ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_catalog_service_card ON catalog_service_card FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+
 CREATE POLICY tenant_isolation_tenants ON tenants FOR ALL USING (true);
-CREATE POLICY tenant_isolation_users ON users FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_olt_model ON catalog_olt_model FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_pon_card ON catalog_pon_card FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_gbic ON catalog_gbic FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_ont ON catalog_ont FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_switch ON catalog_switch FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_router ON catalog_router FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_splitter ON catalog_splitter FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_dgo ON catalog_dgo FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_rj ON catalog_rj FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_dio ON catalog_dio FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_cable_type ON catalog_cable_type FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_duct ON catalog_duct FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_accessory ON catalog_accessory FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_network_asset ON catalog_network_asset FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_catalog_fiber_color ON catalog_fiber_color FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_switches ON switches FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_areas ON areas FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_projects ON projects FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_switch_ports ON switch_ports FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_routers ON routers FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_router_interfaces ON router_interfaces FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_dios ON dios FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_network_designs ON network_designs FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_equipment_swap_history ON equipment_swap_history FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_pops ON pops FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_olt_chassis ON olt_chassis FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_olt_slots ON olt_slots FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_olt_ports ON olt_ports FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_gbics ON gbics FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_ctos ON ctos FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_ces ON ces FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_network_nodes ON network_nodes FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_cables ON cables FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_fibers ON fibers FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_splice_trays ON splice_trays FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_splices ON splices FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_splitters ON splitters FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
-CREATE POLICY tenant_isolation_clients ON clients FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY tenant_isolation_users ON users FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_olt_model ON catalog_olt_model FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_pon_card ON catalog_pon_card FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_gbic ON catalog_gbic FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_ont ON catalog_ont FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_switch ON catalog_switch FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_router ON catalog_router FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_splitter ON catalog_splitter FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_dgo ON catalog_dgo FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_rj ON catalog_rj FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_dio ON catalog_dio FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_cable_type ON catalog_cable_type FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_duct ON catalog_duct FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_accessory ON catalog_accessory FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_network_asset ON catalog_network_asset FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_catalog_fiber_color ON catalog_fiber_color FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_switches ON switches FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_areas ON areas FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_projects ON projects FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_switch_ports ON switch_ports FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_routers ON routers FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_router_interfaces ON router_interfaces FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_dios ON dios FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_network_designs ON network_designs FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_equipment_swap_history ON equipment_swap_history FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_pops ON pops FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_olt_chassis ON olt_chassis FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_olt_slots ON olt_slots FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_olt_ports ON olt_ports FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_gbics ON gbics FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_ctos ON ctos FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_ces ON ces FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_network_nodes ON network_nodes FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_cables ON cables FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_fibers ON fibers FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_splice_trays ON splice_trays FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_splices ON splices FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_splitters ON splitters FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation_clients ON clients FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
 
 -- ========================
 -- SPATIAL INDEXES
@@ -762,6 +787,8 @@ CREATE INDEX IF NOT EXISTS ctos_area_idx ON ctos (area_id);
 CREATE INDEX IF NOT EXISTS ces_area_idx ON ces (area_id);
 CREATE INDEX IF NOT EXISTS network_nodes_area_idx ON network_nodes (area_id);
 CREATE INDEX IF NOT EXISTS cables_area_idx ON cables (area_id);
+CREATE INDEX IF NOT EXISTS catalog_service_card_tenant_idx ON catalog_service_card (tenant_id);
+CREATE INDEX IF NOT EXISTS catalog_service_card_category_idx ON catalog_service_card (category);
 
 -- ========================
 -- SCHEMA MIGRATIONS (for existing DBs)
@@ -848,7 +875,7 @@ BEGIN
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
     ALTER TABLE areas ENABLE ROW LEVEL SECURITY;
-    CREATE POLICY tenant_isolation_areas ON areas FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+    CREATE POLICY tenant_isolation_areas ON areas FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
     CREATE INDEX IF NOT EXISTS areas_tenant_idx ON areas (tenant_id);
   END IF;
 
@@ -866,7 +893,7 @@ BEGIN
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
     ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-    CREATE POLICY tenant_isolation_projects ON projects FOR ALL USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+    CREATE POLICY tenant_isolation_projects ON projects FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
     CREATE INDEX IF NOT EXISTS projects_tenant_idx ON projects (tenant_id);
     CREATE INDEX IF NOT EXISTS projects_area_idx ON projects (area_id);
   END IF;
@@ -930,5 +957,113 @@ BEGIN
   INSERT INTO catalog_cable_type (tenant_id, name, fiber_count, color, stroke_width, dashed)
   SELECT t.id, 'Drop', 2, '#f59e0b', 2, true FROM tenants t
   WHERE NOT EXISTS (SELECT 1 FROM catalog_cable_type WHERE tenant_id = t.id AND name = 'Drop');
+
+  -- Router catalog migrations
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'router_type') THEN
+    CREATE TYPE router_type AS ENUM ('fixed', 'modular');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'card_category') THEN
+    CREATE TYPE card_category AS ENUM ('pon', 'service', 'uplink', 'stacking', 'management', 'power', 'other');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_router' AND column_name = 'type') THEN
+    ALTER TABLE catalog_router ADD COLUMN type router_type DEFAULT 'fixed';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_router' AND column_name = 'slots') THEN
+    ALTER TABLE catalog_router ADD COLUMN slots INTEGER DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_router' AND column_name = 'ethernet_ports') THEN
+    ALTER TABLE catalog_router ADD COLUMN ethernet_ports INTEGER DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_router' AND column_name = 'sfp_ports') THEN
+    ALTER TABLE catalog_router ADD COLUMN sfp_ports INTEGER DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_router' AND column_name = 'sfp28_ports') THEN
+    ALTER TABLE catalog_router ADD COLUMN sfp28_ports INTEGER DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_router' AND column_name = 'qsfp_ports') THEN
+    ALTER TABLE catalog_router ADD COLUMN qsfp_ports INTEGER DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_router' AND column_name = 'qsfp28_ports') THEN
+    ALTER TABLE catalog_router ADD COLUMN qsfp28_ports INTEGER DEFAULT 0;
+  END IF;
+
+  -- Create catalog_service_card table if not exists
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'catalog_service_card') THEN
+    CREATE TABLE catalog_service_card (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL REFERENCES tenants(id),
+      brand VARCHAR(100) NOT NULL,
+      model VARCHAR(100) NOT NULL,
+      category card_category NOT NULL,
+      slots_type VARCHAR(50) DEFAULT 'service',
+      ports INTEGER DEFAULT 0,
+      pon_type VARCHAR(30),
+      description TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(tenant_id, brand, model)
+    );
+    ALTER TABLE catalog_service_card ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY tenant_isolation_catalog_service_card ON catalog_service_card FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+    CREATE INDEX catalog_service_card_tenant_idx ON catalog_service_card (tenant_id);
+    CREATE INDEX catalog_service_card_category_idx ON catalog_service_card (category);
+  END IF;
+
+  -- Map Legend table for KML icons
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'map_legend') THEN
+    CREATE TABLE map_legend (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL REFERENCES tenants(id),
+      name VARCHAR(255) NOT NULL,
+      node_type VARCHAR(50) NOT NULL DEFAULT 'cto',
+      icon_id VARCHAR(255) NOT NULL,
+      color VARCHAR(7),
+      description TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+    ALTER TABLE map_legend ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY tenant_isolation_map_legend ON map_legend FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+    CREATE INDEX map_legend_tenant_idx ON map_legend (tenant_id);
+    CREATE INDEX map_legend_node_type_idx ON map_legend (node_type);
+
+    -- Insert default legend items
+    INSERT INTO map_legend (tenant_id, name, node_type, icon_id, color, description)
+    SELECT t.id, 'POP', 'pop', 'paddle/red-circle.png', '#ff0000', 'Ponto de Presença' FROM tenants t
+    WHERE NOT EXISTS (SELECT 1 FROM map_legend WHERE tenant_id = t.id AND node_type = 'pop');
+    INSERT INTO map_legend (tenant_id, name, node_type, icon_id, color, description)
+    SELECT t.id, 'CTO', 'cto', 'paddle/ylw-circle.png', '#ffff00', 'Caixa de Terminação Óptica' FROM tenants t
+    WHERE NOT EXISTS (SELECT 1 FROM map_legend WHERE tenant_id = t.id AND node_type = 'cto');
+    INSERT INTO map_legend (tenant_id, name, node_type, icon_id, color, description)
+    SELECT t.id, 'CE', 'ce', 'paddle/grn-circle.png', '#00ff00', 'Caixa de Emenda' FROM tenants t
+    WHERE NOT EXISTS (SELECT 1 FROM map_legend WHERE tenant_id = t.id AND node_type = 'ce');
+    INSERT INTO map_legend (tenant_id, name, node_type, icon_id, color, description)
+    SELECT t.id, 'Cliente', 'client', 'paddle/ltblu-circle.png', '#00ffff', 'Cliente Final' FROM tenants t
+    WHERE NOT EXISTS (SELECT 1 FROM map_legend WHERE tenant_id = t.id AND node_type = 'client');
+  END IF;
+
+  -- Add icon_id and icon_color columns to pops, ctos, ces, clients
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pops' AND column_name = 'icon_id') THEN
+    ALTER TABLE pops ADD COLUMN icon_id VARCHAR(255);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pops' AND column_name = 'icon_color') THEN
+    ALTER TABLE pops ADD COLUMN icon_color VARCHAR(7);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ctos' AND column_name = 'icon_id') THEN
+    ALTER TABLE ctos ADD COLUMN icon_id VARCHAR(255);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ctos' AND column_name = 'icon_color') THEN
+    ALTER TABLE ctos ADD COLUMN icon_color VARCHAR(7);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ces' AND column_name = 'icon_id') THEN
+    ALTER TABLE ces ADD COLUMN icon_id VARCHAR(255);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ces' AND column_name = 'icon_color') THEN
+    ALTER TABLE ces ADD COLUMN icon_color VARCHAR(7);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clients' AND column_name = 'icon_id') THEN
+    ALTER TABLE clients ADD COLUMN icon_id VARCHAR(255);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clients' AND column_name = 'icon_color') THEN
+    ALTER TABLE clients ADD COLUMN icon_color VARCHAR(7);
+  END IF;
 END;
 $$;

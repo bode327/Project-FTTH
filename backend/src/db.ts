@@ -24,7 +24,7 @@ export const queryWithRLS = async (req: AuthenticatedRequest, queryText: string,
 
     await client.query('BEGIN');
     // Define a variável de sessão para o RLS
-    await client.query(`SET LOCAL app.current_tenant_id = '${tenant_id}'`);
+    await client.query('SET LOCAL app.current_tenant_id = $1', [tenant_id]);
 
     // Executa a query dentro do contexto seguro do tenant
     const result = await client.query(queryText, params);

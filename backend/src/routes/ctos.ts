@@ -11,7 +11,7 @@ const entityRoutes = (table: string, alias?: string) => {
   router.get('/', async (req: AuthenticatedRequest, res) => {
     try {
       const { area_id } = req.query;
-      let query = `SELECT id, tenant_id, area_id, name, address, capacity, status, ST_AsGeoJSON(geom) as geom, installed_splitters FROM ctos`;
+      let query = `SELECT id, tenant_id, area_id, name, address, capacity, status, ST_AsGeoJSON(geom) as geom, installed_splitters, icon_id, icon_color FROM ctos`;
       const params: any[] = [];
       if (area_id) { query += ' WHERE area_id = $1'; params.push(area_id); }
       query += ' ORDER BY name';
@@ -32,26 +32,26 @@ const entityRoutes = (table: string, alias?: string) => {
 
   router.post('/', async (req: AuthenticatedRequest, res) => {
     try {
-      const { name, address, lat, lng, capacity, status, area_id } = req.body;
+      const { name, address, lat, lng, capacity, status, area_id, icon_id, legend_id, icon_color } = req.body;
       if (!name || name.trim().length < 2) { res.status(400).json({ error: 'Name is required' }); return; }
       let query, params;
       if (lat !== undefined && lng !== undefined) {
-        query = `INSERT INTO ${table} (tenant_id, area_id, name, address, geom, capacity, status) VALUES ($1, $2, $3, $4, ST_SetSRID(ST_Point($5, $6), 4326), $7, $8) RETURNING *`;
-        params = [req.user?.tenant_id, area_id || null, name, address || null, lng, lat, capacity || 8, status || 'active'];
+        query = `INSERT INTO ${table} (tenant_id, area_id, name, address, geom, capacity, status, icon_id, legend_id, icon_color) VALUES ($1, $2, $3, $4, ST_SetSRID(ST_Point($5, $6), 4326), $7, $8, $9, $10, $11) RETURNING *`;
+        params = [req.user?.tenant_id, area_id || null, name, address || null, lng, lat, capacity || 8, status || 'active', icon_id || null, legend_id || null, icon_color || null];
       } else {
-        query = `INSERT INTO ${table} (tenant_id, area_id, name, address, capacity, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
-        params = [req.user?.tenant_id, area_id || null, name, address || null, capacity || 8, status || 'active'];
+        query = `INSERT INTO ${table} (tenant_id, area_id, name, address, capacity, status, icon_id, legend_id, icon_color) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`;
+        params = [req.user?.tenant_id, area_id || null, name, address || null, capacity || 8, status || 'active', icon_id || null, legend_id || null, icon_color || null];
       }
       const result = await queryWithRLS(req, query, params);
       res.status(201).json({ data: result.rows[0] });
-    } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
+    } catch (error: any) { console.error('CTO POST error:', error); res.status(500).json({ error: 'Internal server error: ' + error.message }); }
   });
 
   router.put('/:id', param('id').isUUID(), async (req: AuthenticatedRequest, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) { res.status(400).json({ error: 'Invalid ID' }); return; }
     try {
-      const allowed = ['name', 'address', 'capacity', 'status'];
+      const allowed = ['name', 'address', 'capacity', 'status', 'icon_id', 'legend_id', 'icon_color'];
       const updates = Object.keys(req.body).filter(k => allowed.includes(k));
       if (updates.length === 0) { res.status(400).json({ error: 'No valid fields to update' }); return; }
       const setClause = updates.map((k, i) => `${k} = $${i + 2}`).join(', ');

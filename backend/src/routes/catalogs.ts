@@ -8,7 +8,7 @@ router.use(authenticateToken);
 
 const catalogTypes = [
   'olt-model', 'pon-card', 'gbic', 'ont', 'switch', 'router', 'dio',
-  'splitter', 'dgo', 'rj', 'cable-type', 'duct', 'accessory', 'network-asset', 'fiber-color'
+  'splitter', 'dgo', 'rj', 'cable-type', 'duct', 'accessory', 'network-asset', 'fiber-color', 'service-card'
 ] as const;
 type CatalogType = typeof catalogTypes[number];
 
@@ -38,6 +38,7 @@ router.get('/:type', async (req: AuthenticatedRequest, res) => {
       'accessory': 'SELECT * FROM catalog_accessory ORDER BY category, name',
       'network-asset': 'SELECT * FROM catalog_network_asset ORDER BY category, name',
       'fiber-color': 'SELECT * FROM catalog_fiber_color ORDER BY sequence',
+      'service-card': 'SELECT * FROM catalog_service_card ORDER BY category, brand, model',
     };
     const result = await queryWithRLS(req, queries[type as keyof typeof queries], []);
     res.json({ data: result.rows });
@@ -95,12 +96,6 @@ router.post('/:type', async (req: AuthenticatedRequest, res) => {
         add('wifi_max_mbps', b.wifi_max_mbps); add('rx_power_min_dbm', b.rx_power_min_dbm);
         add('tx_power_dbm', b.tx_power_dbm); add('description', b.description);
         break;
-      case 'dio':
-        if (!b.brand || !b.model || !b.total_ports) { res.status(400).json({ error: 'brand, model e total_ports são obrigatórios' }); return; }
-        add('brand', b.brand); add('model', b.model); add('total_ports', b.total_ports);
-        add('type', b.type || 'rack'); add('height_units', b.height_units || 1);
-        add('splice_capacity', b.splice_capacity || 24); add('description', b.description);
-        break;
       case 'switch':
         if (!b.brand || !b.model) { res.status(400).json({ error: 'brand e model são obrigatórios' }); return; }
         add('brand', b.brand); add('model', b.model); add('type', b.type || 'managed');
@@ -109,13 +104,27 @@ router.post('/:type', async (req: AuthenticatedRequest, res) => {
         add('max_power_watts', b.max_power_watts); add('form_factor', b.form_factor || 'rack');
         add('description', b.description);
         break;
+      case 'dio':
+        if (!b.brand || !b.model || !b.total_ports) { res.status(400).json({ error: 'brand, model e total_ports são obrigatórios' }); return; }
+        add('brand', b.brand); add('model', b.model); add('total_ports', b.total_ports);
+        add('type', b.type || 'rack'); add('height_units', b.height_units || 1);
+        add('splice_capacity', b.splice_capacity || 24); add('description', b.description);
+        break;
       case 'router':
         if (!b.brand || !b.model) { res.status(400).json({ error: 'brand e model são obrigatórios' }); return; }
-        add('brand', b.brand); add('model', b.model); add('type', b.type || 'router');
-        add('wan_ports', b.wan_ports || 2); add('lan_ports', b.lan_ports || 4);
+        add('brand', b.brand); add('model', b.model); add('type', b.type || 'fixed');
+        add('slots', b.slots || 0); add('ethernet_ports', b.ethernet_ports || 0);
+        add('sfp_ports', b.sfp_ports || 0); add('sfp28_ports', b.sfp28_ports || 0);
+        add('qsfp_ports', b.qsfp_ports || 0); add('qsfp28_ports', b.qsfp28_ports || 0);
         add('throughput_mbps', b.throughput_mbps); add('vpn_support', b.vpn_support || false);
         add('firewall', b.firewall !== false); add('max_power_watts', b.max_power_watts);
         add('description', b.description);
+        break;
+      case 'service-card':
+        if (!b.brand || !b.model || !b.category) { res.status(400).json({ error: 'brand, model e category são obrigatórios' }); return; }
+        add('brand', b.brand); add('model', b.model); add('category', b.category);
+        add('slots_type', b.slots_type || 'service'); add('ports', b.ports || 0);
+        add('pon_type', b.pon_type); add('description', b.description);
         break;
       case 'splitter':
         if (!b.ratio || b.insertion_loss_db === undefined) { res.status(400).json({ error: 'ratio e insertion_loss_db são obrigatórios' }); return; }
@@ -140,7 +149,7 @@ router.post('/:type', async (req: AuthenticatedRequest, res) => {
         if (!b.name || !b.fiber_count) { res.status(400).json({ error: 'name e fiber_count são obrigatórios' }); return; }
         add('name', b.name); add('fiber_count', b.fiber_count); add('tube_count', b.tube_count);
         add('jacket_type', b.jacket_type); add('duct_compatible', b.duct_compatible !== false);
-        add('color', b.color || '#3b82f6'); add('stroke_width', b.stroke_width || 3);
+        add('color', b.color || '#3b82f6'); add('stroke_width', parseInt(b.stroke_width, 10) || 3);
         add('dashed', b.dashed !== undefined ? b.dashed : false);
         add('description', b.description);
         break;
@@ -152,7 +161,9 @@ router.post('/:type', async (req: AuthenticatedRequest, res) => {
       case 'accessory':
         if (!b.category || !b.name) { res.status(400).json({ error: 'category e name são obrigatórios' }); return; }
         add('category', b.category); add('name', b.name); add('brand', b.brand);
-        add('unit', b.unit || 'un'); add('description', b.description);
+        add('unit', b.unit || 'un'); add('stock_quantity', b.stock_quantity || 0);
+        add('min_stock', b.min_stock || 0); add('cost', b.cost);
+        add('description', b.description);
         break;
       case 'network-asset':
         if (!b.category || !b.name) { res.status(400).json({ error: 'category e name são obrigatórios' }); return; }
@@ -164,16 +175,17 @@ router.post('/:type', async (req: AuthenticatedRequest, res) => {
         break;
       case 'fiber-color':
         if (!b.sequence || !b.color) { res.status(400).json({ error: 'sequence e color são obrigatórios' }); return; }
-        add('sequence', b.sequence); add('color', b.color); add('color_code', b.color_code);
+        add('sequence', b.sequence); add('color', b.color); add('name', b.name); add('color_code', b.color_code);
         break;
     }
 
     const tables: Record<string, string> = {
       'olt-model': 'catalog_olt_model', 'pon-card': 'catalog_pon_card', 'gbic': 'catalog_gbic',
       'ont': 'catalog_ont', 'switch': 'catalog_switch', 'router': 'catalog_router',
-      'splitter': 'catalog_splitter', 'dgo': 'catalog_dgo', 'rj': 'catalog_rj',
+      'dio': 'catalog_dio', 'splitter': 'catalog_splitter', 'dgo': 'catalog_dgo', 'rj': 'catalog_rj',
       'cable-type': 'catalog_cable_type', 'duct': 'catalog_duct', 'accessory': 'catalog_accessory',
-      'network-asset': 'catalog_network_asset', 'fiber-color': 'catalog_fiber_color',
+      'network-asset': 'catalog_network_asset',
+      'fiber-color': 'catalog_fiber_color', 'service-card': 'catalog_service_card',
     };
 
     const result = await queryWithRLS(req,
@@ -183,7 +195,7 @@ router.post('/:type', async (req: AuthenticatedRequest, res) => {
     res.status(201).json({ data: result.rows[0] });
   } catch (error: any) {
     if (error.code === '23505') { res.status(409).json({ error: 'Já existe um item com esses dados' }); return; }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error: ' + error.message });
   }
 });
 
@@ -195,13 +207,32 @@ router.put('/:type/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const b = req.body;
 
-    const boolFields = ['dashed', 'duct_compatible'];
+    const intFields = ['total_slots', 'max_power_watts', 'ports', 'sfp_slots', 'poe_ports', 'poe_budget_watts', 'max_power_watts', 'slots', 'ethernet_ports', 'sfp_ports', 'sfp28_ports', 'qsfp_ports', 'qsfp28_ports', 'throughput_mbps', 'total_ports', 'height_units', 'splice_capacity', 'capacity_fibers', 'splice_trays', 'max_splitters', 'fiber_count', 'tube_count', 'diameter_mm', 'stock_quantity', 'min_stock', 'sequence'];
+    const numFields = ['tx_power_dbm', 'rx_sensitivity_dbm', 'budget_power_dbm', 'min_output_dbm', 'max_output_dbm', 'max_distance_km', 'wifi_max_mbps', 'rx_power_min_dbm', 'tx_power_dbm', 'insertion_loss_db', 'cost'];
+    
+    for (const field of [...intFields, ...numFields]) {
+      if (field in b) {
+        if (b[field] === '' || b[field] === null) {
+          b[field] = null;
+        } else if (typeof b[field] === 'string') {
+          if (intFields.includes(field)) {
+            b[field] = parseInt(b[field], 10);
+          } else {
+            b[field] = parseFloat(b[field]);
+          }
+        }
+      }
+    }
+    
+    const boolFields = ['dashed', 'duct_compatible', 'vpn_support', 'firewall', 'built_in_splitter'];
     for (const field of boolFields) {
       if (field in b) {
-        if (Array.isArray(b[field])) {
-          b[field] = b[field].length > 0 && b[field][0] !== false;
-        } else if (typeof b[field] === 'string') {
-          b[field] = b[field].toLowerCase() === 'true' || b[field] === '1' || b[field] === 'sim';
+        if (typeof b[field] === 'string') {
+          b[field] = b[field] === 'true' || b[field] === '1' || b[field] === 'sim';
+        } else if (Array.isArray(b[field])) {
+          b[field] = b[field].length > 0;
+        } else {
+          b[field] = !!b[field];
         }
       }
     }
@@ -218,15 +249,17 @@ router.put('/:type/:id', async (req: AuthenticatedRequest, res) => {
       'gbic': { model: b.model, type: b.type, wavelength_range: b.wavelength_range, min_output_dbm: b.min_output_dbm, max_output_dbm: b.max_output_dbm, budget_power_dbm: b.budget_power_dbm, max_distance_km: b.max_distance_km, brand: b.brand, description: b.description },
       'ont': { brand: b.brand, model: b.model, pon_compatibility: b.pon_compatibility, ports_gigabit: b.ports_gigabit, ports_voip: b.ports_voip, ports_catv: b.ports_catv, wifi_standard: b.wifi_standard, wifi_max_mbps: b.wifi_max_mbps, rx_power_min_dbm: b.rx_power_min_dbm, tx_power_dbm: b.tx_power_dbm, description: b.description },
       'switch': { brand: b.brand, model: b.model, type: b.type, layer: b.layer, ports: b.ports, sfp_slots: b.sfp_slots, poe_ports: b.poe_ports, poe_budget_watts: b.poe_budget_watts, max_power_watts: b.max_power_watts, form_factor: b.form_factor, description: b.description },
-      'router': { brand: b.brand, model: b.model, type: b.type, wan_ports: b.wan_ports, lan_ports: b.lan_ports, throughput_mbps: b.throughput_mbps, vpn_support: b.vpn_support, firewall: b.firewall, max_power_watts: b.max_power_watts, description: b.description },
+      'router': { brand: b.brand, model: b.model, type: b.type, slots: b.slots, ethernet_ports: b.ethernet_ports, sfp_ports: b.sfp_ports, sfp28_ports: b.sfp28_ports, qsfp_ports: b.qsfp_ports, qsfp28_ports: b.qsfp28_ports, throughput_mbps: b.throughput_mbps, vpn_support: b.vpn_support, firewall: b.firewall, max_power_watts: b.max_power_watts, description: b.description },
+      'service-card': { brand: b.brand, model: b.model, category: b.category, slots_type: b.slots_type, ports: b.ports, pon_type: b.pon_type, description: b.description },
       'splitter': { ratio: b.ratio, type: b.type, insertion_loss_db: b.insertion_loss_db, brand: b.brand, description: b.description },
       'dgo': { model: b.model, brand: b.brand, capacity_fibers: b.capacity_fibers, splice_trays: b.splice_trays, max_splitters: b.max_splitters, mounting: b.mounting, description: b.description },
       'rj': { model: b.model, brand: b.brand, type: b.type, capacity_fibers: b.capacity_fibers, built_in_splitter: b.built_in_splitter, mounting: b.mounting, description: b.description },
       'cable-type': { name: b.name, fiber_count: b.fiber_count, tube_count: b.tube_count, jacket_type: b.jacket_type, duct_compatible: b.duct_compatible, color: b.color, stroke_width: b.stroke_width, dashed: b.dashed, description: b.description },
       'duct': { name: b.name, diameter_mm: b.diameter_mm, type: b.type, color: b.color, description: b.description },
-      'accessory': { category: b.category, name: b.name, brand: b.brand, unit: b.unit, description: b.description },
-      'network-asset': { category: b.category, name: b.name, brand: b.brand, model: b.model, specifications: JSON.stringify(b.specifications || {}), unit: b.unit, stock_quantity: b.stock_quantity, min_stock: b.min_stock, cost: b.cost, description: b.description },
-      'fiber-color': { sequence: b.sequence, color: b.color, color_code: b.color_code },
+      'dio': { brand: b.brand, model: b.model, total_ports: b.total_ports, type: b.type, height_units: b.height_units, splice_capacity: b.splice_capacity, description: b.description },
+      'accessory': { category: b.category, name: b.name, brand: b.brand, unit: b.unit, stock_quantity: b.stock_quantity, min_stock: b.min_stock, cost: b.cost, description: b.description },
+      'network-asset': { category: b.category, name: b.name, brand: b.brand, model: b.model, specifications: b.specifications, unit: b.unit, stock_quantity: b.stock_quantity, min_stock: b.min_stock, cost: b.cost, description: b.description },
+      'fiber-color': { sequence: b.sequence, color: b.color, name: b.name, color_code: b.color_code },
     };
 
     const fields = fieldMap[type as keyof typeof fieldMap] || {};
@@ -240,9 +273,10 @@ router.put('/:type/:id', async (req: AuthenticatedRequest, res) => {
     const tables: Record<string, string> = {
       'olt-model': 'catalog_olt_model', 'pon-card': 'catalog_pon_card', 'gbic': 'catalog_gbic',
       'ont': 'catalog_ont', 'switch': 'catalog_switch', 'router': 'catalog_router',
-      'splitter': 'catalog_splitter', 'dgo': 'catalog_dgo', 'rj': 'catalog_rj',
+      'dio': 'catalog_dio', 'splitter': 'catalog_splitter', 'dgo': 'catalog_dgo', 'rj': 'catalog_rj',
       'cable-type': 'catalog_cable_type', 'duct': 'catalog_duct', 'accessory': 'catalog_accessory',
-      'network-asset': 'catalog_network_asset', 'fiber-color': 'catalog_fiber_color',
+      'network-asset': 'catalog_network_asset',
+      'service-card': 'catalog_service_card', 'fiber-color': 'catalog_fiber_color',
     };
 
     const result = await queryWithRLS(req,
@@ -252,8 +286,9 @@ router.put('/:type/:id', async (req: AuthenticatedRequest, res) => {
     if (result.rows.length === 0) { res.status(404).json({ error: 'Item não encontrado' }); return; }
     res.json({ data: result.rows[0] });
   } catch (error: any) {
+    console.error('Catalog PUT error:', error.message, error.code, error.detail);
     if (error.code === '23505') { res.status(409).json({ error: 'Já existe um item com esses dados' }); return; }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error: ' + error.message });
   }
 });
 
@@ -266,16 +301,17 @@ router.delete('/:type/:id', async (req: AuthenticatedRequest, res) => {
     const tables: Record<string, string> = {
       'olt-model': 'catalog_olt_model', 'pon-card': 'catalog_pon_card', 'gbic': 'catalog_gbic',
       'ont': 'catalog_ont', 'switch': 'catalog_switch', 'router': 'catalog_router',
-      'splitter': 'catalog_splitter', 'dgo': 'catalog_dgo', 'rj': 'catalog_rj',
+      'dio': 'catalog_dio', 'splitter': 'catalog_splitter', 'dgo': 'catalog_dgo', 'rj': 'catalog_rj',
       'cable-type': 'catalog_cable_type', 'duct': 'catalog_duct', 'accessory': 'catalog_accessory',
-      'network-asset': 'catalog_network_asset', 'fiber-color': 'catalog_fiber_color',
+      'network-asset': 'catalog_network_asset',
+      'fiber-color': 'catalog_fiber_color', 'service-card': 'catalog_service_card',
     };
     const result = await queryWithRLS(req, `DELETE FROM ${tables[type as keyof typeof tables]} WHERE id = $1 RETURNING id`, [id]);
     if (result.rows.length === 0) { res.status(404).json({ error: 'Item não encontrado' }); return; }
     res.json({ message: 'Item excluído' });
   } catch (error: any) {
-    if (error.code === '23505') { res.status(409).json({ error: 'Já existe um item com esses dados' }); return; }
-    console.error('Catalog PUT error:', error.message, error.code, error.detail);
+    if (error.code === '23505') { res.status(409).json({ error: 'Não é possível excluir: item em uso' }); return; }
+    console.error('Catalog DELETE error:', error.message, error.code, error.detail);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -57,4 +57,6 @@ export const apiRoutes = {
   swapEquipment: '/swap/equipment',
   swapHistory: '/swap/swap-history',
   networkDesigns: '/swap/network-designs',
+  legend: '/legend',
+  projectFolders: '/project-folders',
 };

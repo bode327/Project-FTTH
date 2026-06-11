@@ -50,25 +50,26 @@ router.get('/:id/fibers', param('id').isUUID(), async (req: AuthenticatedRequest
 
 router.post('/', async (req: AuthenticatedRequest, res) => {
   try {
-    const { name, node_a_id, node_b_id, catalog_cable_type_id, calculated_distance_km, measured_distance_km, lat, lng, area_id } = req.body;
+    const { name, node_a_id, node_b_id, cable_type_id, calculated_distance_km, measured_distance_km, lat, lng, area_id } = req.body;
     if (!name || name.trim().length < 2) { res.status(400).json({ error: 'Name is required' }); return; }
-    let geom = null;
-    if (lat !== undefined && lng !== undefined) {
-      geom = `ST_SetSRID(ST_Point(${lng}, ${lat}), 4326)`;
-    }
     let cableAreaId = area_id || null;
     if (!cableAreaId && node_a_id) {
       const nodeA = await queryWithRLS(req, 'SELECT area_id FROM network_nodes WHERE id = $1', [node_a_id]);
       if (nodeA.rows.length > 0 && nodeA.rows[0].area_id) cableAreaId = nodeA.rows[0].area_id;
     }
-    const query = geom
-      ? 'INSERT INTO cables (tenant_id, area_id, name, node_a_id, node_b_id, catalog_cable_type_id, calculated_distance_km, measured_distance_km, geom) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, ST_SetSRID(ST_Point($9, $10), 4326)) RETURNING *'
-      : 'INSERT INTO cables (tenant_id, area_id, name, node_a_id, node_b_id, catalog_cable_type_id, calculated_distance_km, measured_distance_km) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *';
-    const params = geom
-      ? [req.user?.tenant_id, cableAreaId, name, node_a_id || null, node_b_id || null, catalog_cable_type_id || null, calculated_distance_km || null, measured_distance_km || null, lng, lat]
-      : [req.user?.tenant_id, cableAreaId, name, node_a_id || null, node_b_id || null, catalog_cable_type_id || null, calculated_distance_km || null, measured_distance_km || null];
-    const result = await queryWithRLS(req, query, params);
-    res.status(201).json({ data: result.rows[0] });
+    if (lat !== undefined && lng !== undefined) {
+      const result = await queryWithRLS(req,
+        `INSERT INTO cables (tenant_id, area_id, name, node_a_id, node_b_id, cable_type_id, calculated_distance_km, measured_distance_km, geom) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, ST_SetSRID(ST_Point($9, $10), 4326)) RETURNING *`,
+        [req.user?.tenant_id, cableAreaId, name, node_a_id || null, node_b_id || null, cable_type_id || null, calculated_distance_km || null, measured_distance_km || null, lng, lat]
+      );
+      res.status(201).json({ data: result.rows[0] });
+    } else {
+      const result = await queryWithRLS(req,
+        `INSERT INTO cables (tenant_id, area_id, name, node_a_id, node_b_id, cable_type_id, calculated_distance_km, measured_distance_km) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        [req.user?.tenant_id, cableAreaId, name, node_a_id || null, node_b_id || null, cable_type_id || null, calculated_distance_km || null, measured_distance_km || null]
+      );
+      res.status(201).json({ data: result.rows[0] });
+    }
   } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
 });
 
