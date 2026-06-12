@@ -40,7 +40,7 @@ router.get('/:type', async (req: AuthenticatedRequest, res) => {
       'fiber-color': 'SELECT * FROM catalog_fiber_color ORDER BY sequence',
       'service-card': 'SELECT * FROM catalog_service_card ORDER BY category, brand, model',
     };
-    const result = await queryWithRLS(req, queries[type as keyof typeof queries], []);
+    const result = await queryWithRLS(req, queries[type as keyof typeof queries]);
     res.json({ data: result.rows });
   } catch (error: any) { 
     console.error('Catalog GET error:', error.message, error.code, error.detail);

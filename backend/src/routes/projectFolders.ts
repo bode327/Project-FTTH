@@ -8,7 +8,7 @@ router.use(authenticateToken);
 
 router.get('/', async (req: AuthenticatedRequest, res) => {
   try {
-    const result = await queryWithRLS(req, 'SELECT * FROM project_folders ORDER BY name', []);
+    const result = await queryWithRLS(req, 'SELECT * FROM project_folders ORDER BY name');
     res.json({ data: result.rows });
   } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
 });

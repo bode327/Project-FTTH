@@ -28,7 +28,7 @@ router.get('/equipment', async (req: AuthenticatedRequest, res) => {
     if (!queries[type as string]) { res.status(400).json({ error: 'Tipo inválido' }); return; }
     const needsTenant = ['olt_chassis', 'switches', 'routers'].includes(type as string);
     if (needsTenant && !req.user?.tenant_id) { res.status(401).json({ error: 'Não autorizado' }); return; }
-    const result = await queryWithRLS(req, queries[type as string], needsTenant ? [req.user!.tenant_id] : []);
+    const result = await queryWithRLS(req, queries[type as string], needsTenant ? [req.user!.tenant_id] : undefined);
     res.json({ data: result.rows });
   } catch (error: any) { console.error('[/swap/equipment]', error.message); res.status(500).json({ error: 'Internal server error' }); }
 });

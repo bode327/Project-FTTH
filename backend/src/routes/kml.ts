@@ -13,11 +13,11 @@ router.use(authenticateToken);
 router.get('/export', async (req: AuthenticatedRequest, res) => {
   try {
     const [pops, ctos, ces, cables, clients] = await Promise.all([
-      queryWithRLS(req, 'SELECT id, name, address, ST_X(geom) as lng, ST_Y(geom) as lat, icon_id, icon_color FROM pops WHERE geom IS NOT NULL', []),
-      queryWithRLS(req, 'SELECT id, name, address, capacity, status, ST_X(geom) as lng, ST_Y(geom) as lat, icon_id, icon_color FROM ctos WHERE geom IS NOT NULL', []),
-      queryWithRLS(req, 'SELECT id, name, address, capacity, ST_X(geom) as lng, ST_Y(geom) as lat, icon_id, icon_color FROM ces WHERE geom IS NOT NULL', []),
-      queryWithRLS(req, `SELECT c.id, c.name, c.status, ST_X(ST_StartPoint(c.geom)) as lng_a, ST_Y(ST_StartPoint(c.geom)) as lat_a, ST_X(ST_EndPoint(c.geom)) as lng_b, ST_Y(ST_EndPoint(c.geom)) as lat_b, na.name as node_a_name, nb.name as node_b_name, ct.color, ct.stroke_width FROM cables c LEFT JOIN network_nodes na ON na.id = c.node_a_id LEFT JOIN network_nodes nb ON nb.id = c.node_b_id LEFT JOIN catalog_cable_type ct ON ct.id = c.cable_type_id WHERE c.geom IS NOT NULL`, []),
-      queryWithRLS(req, `SELECT cl.id, cl.name, cl.address, cl.phone, cl.plan_mbps, cl.status, cl.ont_serial, cl.vlan, ST_X(cl.geom) as lng, ST_Y(cl.geom) as lat, cl.icon_id, cl.icon_color FROM clients cl WHERE cl.geom IS NOT NULL`, []),
+      queryWithRLS(req, 'SELECT id, name, address, ST_X(geom) as lng, ST_Y(geom) as lat, icon_id, icon_color FROM pops WHERE geom IS NOT NULL'),
+      queryWithRLS(req, 'SELECT id, name, address, capacity, status, ST_X(geom) as lng, ST_Y(geom) as lat, icon_id, icon_color FROM ctos WHERE geom IS NOT NULL'),
+      queryWithRLS(req, 'SELECT id, name, address, capacity, ST_X(geom) as lng, ST_Y(geom) as lat, icon_id, icon_color FROM ces WHERE geom IS NOT NULL'),
+      queryWithRLS(req, `SELECT c.id, c.name, c.status, ST_X(ST_StartPoint(c.geom)) as lng_a, ST_Y(ST_StartPoint(c.geom)) as lat_a, ST_X(ST_EndPoint(c.geom)) as lng_b, ST_Y(ST_EndPoint(c.geom)) as lat_b, na.name as node_a_name, nb.name as node_b_name, ct.color, ct.stroke_width FROM cables c LEFT JOIN network_nodes na ON na.id = c.node_a_id LEFT JOIN network_nodes nb ON nb.id = c.node_b_id LEFT JOIN catalog_cable_type ct ON ct.id = c.cable_type_id WHERE c.geom IS NOT NULL`),
+      queryWithRLS(req, `SELECT cl.id, cl.name, cl.address, cl.phone, cl.plan_mbps, cl.status, cl.ont_serial, cl.vlan, ST_X(cl.geom) as lng, ST_Y(cl.geom) as lat, cl.icon_id, cl.icon_color FROM clients cl WHERE cl.geom IS NOT NULL`),
     ]);
 
     const esc = (s: any) => s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

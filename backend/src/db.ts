@@ -14,7 +14,7 @@ const pool = new Pool({
 });
 
 // Wrapper para executar query garantindo o RLS ativado para o tenant
-export const queryWithRLS = async (req: AuthenticatedRequest, queryText: string, params: any[]) => {
+export const queryWithRLS = async (req: AuthenticatedRequest, queryText: string, params?: any[]) => {
   const client = await pool.connect();
   try {
     const tenant_id = req.user?.tenant_id;
@@ -23,11 +23,11 @@ export const queryWithRLS = async (req: AuthenticatedRequest, queryText: string,
     }
 
     await client.query('BEGIN');
-    // Define a variável de sessão para o RLS
     await client.query('SET LOCAL app.current_tenant_id = $1', [tenant_id]);
 
-    // Executa a query dentro do contexto seguro do tenant
-    const result = await client.query(queryText, params);
+    const result = params && params.length > 0
+      ? await client.query(queryText, params)
+      : await client.query(queryText);
 
     await client.query('COMMIT');
     return result;

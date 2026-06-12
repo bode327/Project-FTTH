@@ -46,7 +46,7 @@ const getIconUrl = (iconId: string | null | undefined): string => {
   if (iconId.startsWith('paddle/')) return `${BASE}/${iconId}.png`;
   if (iconId.startsWith('shapes/')) return `${BASE}/${iconId}.png`;
   if (iconId.startsWith('pushpin/')) return `${BASE}/${iconId}.png`;
-  return `${BASE}/${iconId}.png`;
+  return `${BASE}/pushpin/${iconId}.png`;
 };
 
 const DEFAULT_CENTER: [number, number] = [-19.9, -43.9];
@@ -89,6 +89,7 @@ export default function NetworkMapPage() {
   const [showAddNode, setShowAddNode] = useState(false);
   const [showCableModal, setShowCableModal] = useState(false);
   const [newNodeIcon, setNewNodeIcon] = useState('');
+  const [newNodeIconColor, setNewNodeIconColor] = useState('');
 
   const [newNodeCoords, setNewNodeCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [newNodeName, setNewNodeName] = useState('');
@@ -235,6 +236,7 @@ export default function NetworkMapPage() {
     if (drawMode === 'node') {
       setNewNodeCoords({ lat, lng });
       setNewNodeName(''); setNewNodeAddress(''); setNewNodeStatus('active');
+      setNewNodeIcon(''); setNewNodeIconColor('');
       setShowAddNode(true);
       return;
     }
@@ -254,10 +256,10 @@ export default function NetworkMapPage() {
       const nearest = findNearestNode(lat, lng);
       if (!chainStartNode) {
         if (nearest) { setChainStartNode(nearest); setTempLineEnd({ lat, lng }); showMsg(`${nearest.name} → próximo`); }
-        else { setNewNodeCoords({ lat, lng }); setNewNodeName(`${selectedNodeType.toUpperCase()} ${Date.now() % 10000}`); setNewNodeAddress(''); setNewNodeStatus('active'); setShowAddNode(true); }
+        else { setNewNodeCoords({ lat, lng }); setNewNodeName(`${selectedNodeType.toUpperCase()} ${Date.now() % 10000}`); setNewNodeAddress(''); setNewNodeStatus('active'); setNewNodeIcon(''); setNewNodeIconColor(''); setShowAddNode(true); }
       } else {
         if (nearest && nearest.id !== chainStartNode.id) { createCableBetweenNodes(chainStartNode, nearest); setChainStartNode(nearest); setTempLineEnd({ lat, lng }); }
-        else if (!nearest) { setNewNodeCoords({ lat, lng }); setNewNodeName(`${selectedNodeType.toUpperCase()} ${Date.now() % 10000}`); setNewNodeAddress(''); setNewNodeStatus('active'); setShowAddNode(true); }
+        else if (!nearest) { setNewNodeCoords({ lat, lng }); setNewNodeName(`${selectedNodeType.toUpperCase()} ${Date.now() % 10000}`); setNewNodeAddress(''); setNewNodeStatus('active'); setNewNodeIcon(''); setNewNodeIconColor(''); setShowAddNode(true); }
       }
     }
     if (drawMode === 'path') {
@@ -295,6 +297,7 @@ export default function NetworkMapPage() {
         name: newNodeName, address: newNodeAddress,
         lat: newNodeCoords.lat, lng: newNodeCoords.lng,
         status: newNodeStatus, area_id: selectedArea || null, icon_id: newNodeIcon,
+        icon_color: newNodeIconColor || null,
       });
       await refreshAll();
       setShowAddNode(false);
@@ -651,7 +654,7 @@ export default function NetworkMapPage() {
           searchedLocation={searchedLocation}
           satelliteView={satelliteView}
           onCenterOnNode={centerOnNode}
-          onEditNode={(node: NodeData) => { if (node.geom?.coordinates) { setNewNodeCoords({ lat: node.geom.coordinates[1], lng: node.geom.coordinates[0] }); setNewNodeName(node.name); setNewNodeAddress(node.address || ''); setShowAddNode(true); } }}
+          onEditNode={(node: NodeData) => { if (node.geom?.coordinates) { setNewNodeCoords({ lat: node.geom.coordinates[1], lng: node.geom.coordinates[0] }); setNewNodeName(node.name); setNewNodeAddress(node.address || ''); setNewNodeIcon((node as any).icon_id || ''); setNewNodeIconColor((node as any).icon_color || ''); setShowAddNode(true); } }}
           onDeleteNode={(node: NodeData) => { if (confirm(`Excluir "${node.name}"?`)) { deleteNode(node); } }}
           getNodeIconUrl={getNodeIconUrl}
         />
@@ -682,7 +685,7 @@ export default function NetworkMapPage() {
                   <Typography variant="body2" gutterBottom>Ícone</Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {legendItems.filter(l => l.node_type !== 'cable').map(item => (
-                      <Box key={item.id} onClick={() => setNewNodeIcon(item.icon_id)} sx={{ p: 1, borderRadius: 1, border: '2px solid', borderColor: newNodeIcon === item.icon_id ? 'primary.main' : 'transparent', cursor: 'pointer', bgcolor: newNodeIcon === item.icon_id ? 'primary.light' : 'transparent' }}>
+                      <Box key={item.id} onClick={() => { setNewNodeIcon(item.icon_id); setNewNodeIconColor(item.color || ''); }} sx={{ p: 1, borderRadius: 1, border: '2px solid', borderColor: newNodeIcon === item.icon_id ? 'primary.main' : 'transparent', cursor: 'pointer', bgcolor: newNodeIcon === item.icon_id ? 'primary.light' : 'transparent' }}>
                         <img src={getIconUrl(item.icon_id)} alt={item.name} style={{ width: 40, height: 40, objectFit: 'contain' }} />
                       </Box>
                     ))}

@@ -5,26 +5,72 @@ import { api, apiRoutes } from '@/lib/api';
 
 const BASE = '/assets/kml-icons';
 
-const iconOptions = [
-  { id: 'red-pushpin', url: `${BASE}/pushpin/red-pushpin.png`, label: 'Pushpin Vermelho' },
-  { id: 'ylw-pushpin', url: `${BASE}/pushpin/ylw-pushpin.png`, label: 'Pushpin Amarelo' },
-  { id: 'grn-pushpin', url: `${BASE}/pushpin/grn-pushpin.png`, label: 'Pushpin Verde' },
-  { id: 'ltblu-pushpin', url: `${BASE}/pushpin/ltblu-pushpin.png`, label: 'Pushpin Azul claro' },
-  { id: 'purple-pushpin', url: `${BASE}/pushpin/purple-pushpin.png`, label: 'Pushpin Roxo' },
-  { id: 'paddle/red-circle', url: `${BASE}/paddle/red-circle.png`, label: 'Círculo Vermelho' },
-  { id: 'paddle/ylw-circle', url: `${BASE}/paddle/ylw-circle.png`, label: 'Círculo Amarelo' },
-  { id: 'paddle/grn-circle', url: `${BASE}/paddle/grn-circle.png`, label: 'Círculo Verde' },
-  { id: 'paddle/blu-circle', url: `${BASE}/paddle/blu-circle.png`, label: 'Círculo Azul' },
-  { id: 'paddle/ylw-square', url: `${BASE}/paddle/ylw-square.png`, label: 'Quadrado Amarelo' },
-  { id: 'paddle/grn-square', url: `${BASE}/paddle/grn-square.png`, label: 'Quadrado Verde' },
-  { id: 'paddle/red-diamond', url: `${BASE}/paddle/red-diamond.png`, label: 'Diamante Vermelho' },
-  { id: 'paddle/ylw-diamond', url: `${BASE}/paddle/ylw-diamond.png`, label: 'Diamante Amarelo' },
-  { id: 'shapes/donut', url: `${BASE}/shapes/donut.png`, label: 'Donut' },
-  { id: 'shapes/placemark_circle', url: `${BASE}/shapes/placemark_circle.png`, label: 'Círculo Place' },
-  { id: 'shapes/placemark_square', url: `${BASE}/shapes/placemark_square.png`, label: 'Quadrado Place' },
-  { id: 'shapes/star', url: `${BASE}/shapes/star.png`, label: 'Estrela' },
-  { id: 'shapes/flag', url: `${BASE}/shapes/flag.png`, label: 'Bandeira' },
-];
+const COLOR_LABELS: Record<string, string> = { blu: 'Azul', grn: 'Verde', ltblu: 'Azul Claro', pink: 'Rosa', purple: 'Roxo', red: 'Vermelho', wht: 'Branco', ylw: 'Amarelo' };
+const SHAPE_LABELS: Record<string, string> = { circle: 'Círculo', diamond: 'Diamante', square: 'Quadrado', stars: 'Estrelas' };
+
+const iconOptions: { id: string; url: string; label: string; category: string }[] = [];
+
+// Pushpin
+const pushpinLabels: Record<string, string> = { 'red-pushpin': 'Vermelho', 'ylw-pushpin': 'Amarelo', 'grn-pushpin': 'Verde', 'ltblu-pushpin': 'Azul Claro', 'purple-pushpin': 'Roxo', 'pink-pushpin': 'Rosa', 'wht-pushpin': 'Branco' };
+for (const [id, label] of Object.entries(pushpinLabels)) {
+  iconOptions.push({ id, url: `${BASE}/pushpin/${id}.png`, label: `Pushpin ${label}`, category: 'Alfinetes' });
+}
+
+// Paddle - Colors
+for (const c of ['blu', 'grn', 'ltblu', 'pink', 'purple', 'red', 'wht', 'ylw']) {
+  for (const s of ['circle', 'diamond', 'square', 'stars']) {
+    iconOptions.push({ id: `paddle/${c}-${s}`, url: `${BASE}/paddle/${c}-${s}.png`, label: `${COLOR_LABELS[c]} ${SHAPE_LABELS[s]}`, category: 'Marca-texto' });
+  }
+}
+for (const extra of [
+  { id: 'paddle/ltblu-blank', label: 'Azul Claro Vazio' },
+  { id: 'paddle/wht-blank', label: 'Branco Vazio' },
+  { id: 'paddle/go', label: 'Go' },
+  { id: 'paddle/pause', label: 'Pause' },
+  { id: 'paddle/stop', label: 'Stop' },
+]) { iconOptions.push({ ...extra, url: `${BASE}/${extra.id}.png`, category: 'Marca-texto' }); }
+
+// Paddle - Letters
+for (const l of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+  iconOptions.push({ id: `paddle/${l}`, url: `${BASE}/paddle/${l}.png`, label: `Letra ${l}`, category: 'Letras' });
+}
+
+// Paddle - Numbers
+for (const n of ['1','2','3','4','5','6','7','8','9','10']) {
+  iconOptions.push({ id: `paddle/${n}`, url: `${BASE}/paddle/${n}.png`, label: `Número ${n}`, category: 'Números' });
+}
+
+// Shapes
+const shapeLabels: Record<string, string> = {
+  airports: 'Aeroporto', arrow: 'Seta', 'arrow-reverse': 'Seta Reversa', arts: 'Artes',
+  bars: 'Bar', camera: 'Câmera', campfire: 'Fogueira', campground: 'Acampamento',
+  caution: 'Cuidado', church: 'Igreja', coffee: 'Café', convenience: 'Conveniência',
+  'cross-hairs': 'Mira', dining: 'Restaurante', dollar: 'Dólar', donut: 'Donut',
+  earthquake: 'Terremoto', electronics: 'Eletrônicos', euro: 'Euro',
+  ferry: 'Balsa', firedept: 'Bombeiros', fishing: 'Pesca', flag: 'Bandeira',
+  forbidden: 'Proibido', gas_stations: 'Posto', golf: 'Golfe', grocery: 'Supermercado',
+  heliport: 'Heliporto', highway: 'Rodovia', hiker: 'Trilha', homegardenbusiness: 'Casa',
+  horsebackriding: 'Cavalgada', hospitals: 'Hospital', info: 'Informação', 'info-i': 'Info I',
+  lodging: 'Hospedagem', man: 'Homem', marina: 'Marina', mechanic: 'Mecânico',
+  motorcycling: 'Moto', mountains: 'Montanhas', movies: 'Cinema', 'open-diamond': 'Diamante Aberto',
+  parking_lot: 'Estacionamento', parks: 'Parque', pharmacy_rx: 'Farmácia', phone: 'Telefone',
+  picnic: 'Piquenique', placemark_circle: 'Círculo Placemark', placemark_square: 'Quadrado Placemark',
+  play: 'Play', poi: 'POI', police: 'Polícia', polygon: 'Polígono', post_office: 'Correios',
+  rail: 'Trem', ranger_station: 'Guarda Florestal', realestate: 'Imóvel',
+  road_shield1: 'Escudo Rodovia 1', road_shield2: 'Escudo Rodovia 2', road_shield3: 'Escudo Rodovia 3',
+  ruler: 'Régua', sailing: 'Vela', salon: 'Salão', schools: 'Escola',
+  shaded_dot: 'Ponto Sombreado', shopping: 'Compras', ski: 'Esqui', snack_bar: 'Lanchonete',
+  square: 'Quadrado', star: 'Estrela', subway: 'Metrô', swimming: 'Natação',
+  target: 'Alvo', terrain: 'Terreno', toilets: 'Banheiro', trail: 'Trilha',
+  tram: 'Bonde', triangle: 'Triângulo', truck: 'Caminhão', volcano: 'Vulcão',
+  water: 'Água', webcam: 'Webcam', wheel_chair_accessible: 'Acessível', woman: 'Mulher', yen: 'Yen',
+};
+for (const [id, label] of Object.entries(shapeLabels)) {
+  iconOptions.push({ id: `shapes/${id}`, url: `${BASE}/shapes/${id}.png`, label, category: 'Formas' });
+}
+
+const CATEGORY_ORDER = ['Alfinetes', 'Marca-texto', 'Letras', 'Números', 'Formas'];
+const groupedIcons = CATEGORY_ORDER.map(cat => ({ category: cat, icons: iconOptions.filter(i => i.category === cat) }));
 
 const colorOptions = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -65,7 +111,7 @@ export default function LegendPage() {
   };
 
   const getIconUrl = (iconId: string) => {
-    if (iconId.startsWith('paddle/') || iconId.startsWith('shapes/')) return `${BASE}/${iconId}.png`;
+    if (iconId.startsWith('paddle/') || iconId.startsWith('shapes/') || iconId.startsWith('pushpin/')) return `${BASE}/${iconId}.png`;
     return `${BASE}/pushpin/${iconId}.png`;
   };
 
@@ -90,11 +136,18 @@ export default function LegendPage() {
               </select>
             </div>
             <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Ícone</label>
-              <div className="grid grid-cols-6 gap-2">
-                {iconOptions.map(icon => (
-                  <button key={icon.id} type="button" onClick={() => setForm({...form, icon_id: icon.id})} className={`p-1 rounded border-2 transition ${form.icon_id === icon.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`} title={icon.label}>
-                    <img src={icon.url} alt={icon.label} className="w-full" />
-                  </button>
+              <div className="max-h-80 overflow-y-auto border rounded-lg p-2 space-y-3">
+                {groupedIcons.map(group => (
+                  <div key={group.category}>
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1 sticky top-0 bg-white py-1">{group.category}</p>
+                    <div className="grid grid-cols-8 gap-1">
+                      {group.icons.map(icon => (
+                        <button key={icon.id} type="button" onClick={() => setForm({...form, icon_id: icon.id})} className={`p-1 rounded border transition ${form.icon_id === icon.id ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300' : 'border-gray-200 hover:border-blue-300'}`} title={icon.label}>
+                          <img src={icon.url} alt={icon.label} className="w-full max-w-[32px] mx-auto" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

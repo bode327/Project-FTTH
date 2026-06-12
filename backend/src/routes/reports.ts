@@ -7,12 +7,12 @@ router.use(authenticateToken);
 
 router.get('/summary', async (req: AuthenticatedRequest, res) => {
   try {
-    const pops = await queryWithRLS(req, 'SELECT COUNT(*) FROM pops', []);
-    const ctos = await queryWithRLS(req, 'SELECT COUNT(*) FROM ctos', []);
+    const pops = await queryWithRLS(req, 'SELECT COUNT(*) FROM pops');
+    const ctos = await queryWithRLS(req, 'SELECT COUNT(*) FROM ctos');
     const clients = await queryWithRLS(req, 'SELECT COUNT(*) FROM clients WHERE status = $1', ['active']);
-    const cables = await queryWithRLS(req, 'SELECT COUNT(*) FROM cables', []);
-    const splices = await queryWithRLS(req, 'SELECT COUNT(*) FROM splices', []);
-    const splitters = await queryWithRLS(req, 'SELECT COUNT(*) FROM splitters', []);
+    const cables = await queryWithRLS(req, 'SELECT COUNT(*) FROM cables');
+    const splices = await queryWithRLS(req, 'SELECT COUNT(*) FROM splices');
+    const splitters = await queryWithRLS(req, 'SELECT COUNT(*) FROM splitters');
     const gbics = await queryWithRLS(req, 'SELECT COUNT(*) FROM gbics WHERE status = $1', ['active']);
     const projects = await queryWithRLS(req, 'SELECT COUNT(*) FROM projects WHERE status = $1', ['draft']);
     res.json({
@@ -36,17 +36,17 @@ router.get('/clients', async (req: AuthenticatedRequest, res) => {
       SELECT c.name, c.address, c.phone, c.plan_mbps, c.status, cto.name as cto_name, cto.address as cto_address
       FROM clients c LEFT JOIN ctos cto ON c.cto_id = cto.id
       ORDER BY c.name
-    `, []);
+    `);
     res.json({ data: result.rows });
   } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
 });
 
 router.get('/network', async (req: AuthenticatedRequest, res) => {
   try {
-    const pops = await queryWithRLS(req, "SELECT id, name, address, ST_X(geom) as lng, ST_Y(geom) as lat FROM pops WHERE geom IS NOT NULL", []);
-    const ctos = await queryWithRLS(req, "SELECT id, name, address, ST_X(geom) as lng, ST_Y(geom) as lat FROM ctos WHERE geom IS NOT NULL", []);
-    const ces = await queryWithRLS(req, "SELECT id, name, address, ST_X(geom) as lng, ST_Y(geom) as lat FROM ces WHERE geom IS NOT NULL", []);
-    const cables = await queryWithRLS(req, "SELECT id, name, ST_AsText(geom) as geom_text FROM cables WHERE geom IS NOT NULL", []);
+    const pops = await queryWithRLS(req, "SELECT id, name, address, ST_X(geom) as lng, ST_Y(geom) as lat FROM pops WHERE geom IS NOT NULL");
+    const ctos = await queryWithRLS(req, "SELECT id, name, address, ST_X(geom) as lng, ST_Y(geom) as lat FROM ctos WHERE geom IS NOT NULL");
+    const ces = await queryWithRLS(req, "SELECT id, name, address, ST_X(geom) as lng, ST_Y(geom) as lat FROM ces WHERE geom IS NOT NULL");
+    const cables = await queryWithRLS(req, "SELECT id, name, ST_AsText(geom) as geom_text FROM cables WHERE geom IS NOT NULL");
     res.json({ data: { pops: pops.rows, ctos: ctos.rows, ces: ces.rows, cables: cables.rows } });
   } catch (error: any) { res.status(500).json({ error: 'Internal server error' }); }
 });

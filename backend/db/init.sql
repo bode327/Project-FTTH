@@ -1027,16 +1027,16 @@ BEGIN
 
     -- Insert default legend items
     INSERT INTO map_legend (tenant_id, name, node_type, icon_id, color, description)
-    SELECT t.id, 'POP', 'pop', 'paddle/red-circle.png', '#ff0000', 'Ponto de Presença' FROM tenants t
+    SELECT t.id, 'POP', 'pop', 'paddle/red-circle', '#ff0000', 'Ponto de Presença' FROM tenants t
     WHERE NOT EXISTS (SELECT 1 FROM map_legend WHERE tenant_id = t.id AND node_type = 'pop');
     INSERT INTO map_legend (tenant_id, name, node_type, icon_id, color, description)
-    SELECT t.id, 'CTO', 'cto', 'paddle/ylw-circle.png', '#ffff00', 'Caixa de Terminação Óptica' FROM tenants t
+    SELECT t.id, 'CTO', 'cto', 'paddle/ylw-circle', '#ffff00', 'Caixa de Terminação Óptica' FROM tenants t
     WHERE NOT EXISTS (SELECT 1 FROM map_legend WHERE tenant_id = t.id AND node_type = 'cto');
     INSERT INTO map_legend (tenant_id, name, node_type, icon_id, color, description)
-    SELECT t.id, 'CE', 'ce', 'paddle/grn-circle.png', '#00ff00', 'Caixa de Emenda' FROM tenants t
+    SELECT t.id, 'CE', 'ce', 'paddle/grn-circle', '#00ff00', 'Caixa de Emenda' FROM tenants t
     WHERE NOT EXISTS (SELECT 1 FROM map_legend WHERE tenant_id = t.id AND node_type = 'ce');
     INSERT INTO map_legend (tenant_id, name, node_type, icon_id, color, description)
-    SELECT t.id, 'Cliente', 'client', 'paddle/ltblu-circle.png', '#00ffff', 'Cliente Final' FROM tenants t
+    SELECT t.id, 'Cliente', 'client', 'paddle/ltblu-circle', '#00ffff', 'Cliente Final' FROM tenants t
     WHERE NOT EXISTS (SELECT 1 FROM map_legend WHERE tenant_id = t.id AND node_type = 'client');
   END IF;
 
@@ -1065,5 +1065,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clients' AND column_name = 'icon_color') THEN
     ALTER TABLE clients ADD COLUMN icon_color VARCHAR(7);
   END IF;
+
+  -- Fix existing icon_id values that include .png extension
+  UPDATE map_legend SET icon_id = regexp_replace(icon_id, '\.png$', '') WHERE icon_id LIKE '%.png';
+  UPDATE pops SET icon_id = regexp_replace(icon_id, '\.png$', '') WHERE icon_id LIKE '%.png';
+  UPDATE ctos SET icon_id = regexp_replace(icon_id, '\.png$', '') WHERE icon_id LIKE '%.png';
+  UPDATE ces SET icon_id = regexp_replace(icon_id, '\.png$', '') WHERE icon_id LIKE '%.png';
+  UPDATE clients SET icon_id = regexp_replace(icon_id, '\.png$', '') WHERE icon_id LIKE '%.png';
 END;
 $$;
